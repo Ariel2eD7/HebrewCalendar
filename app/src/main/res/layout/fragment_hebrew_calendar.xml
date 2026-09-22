@@ -18,79 +18,321 @@
         android:textStyle="bold"
         android:padding="12dp" />
 
-    <!-- כותרות הימים -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <TextView
-            android:layout_width="70dp"
-            android:layout_height="wrap_content" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="א"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="ב"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="ג"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="ד"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="ה"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="ו"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="ש"
-            android:textStyle="bold" />
-
-    </LinearLayout>
-
-    <!-- כאן יוצגו כל החודשים -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/monthsRecyclerView"
+    <!-- גלילה אופקית של כל לוח השנה -->
+    <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:fillViewport="false"
+        android:scrollbars="horizontal">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <!-- כותרות הימים -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:orientation="horizontal">
+
+                <!-- מקום עבור שם החודש -->
+                <TextView
+                    android:layout_width="70dp"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 1 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="א"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 2 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ב"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 3 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ג"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 4 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ד"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 5 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ה"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 6 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ו"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 7 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ש"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 8 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="א"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 9 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ב"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 10 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ג"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 11 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ד"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 12 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ה"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 13 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ו"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 14 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ש"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 15 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="א"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 16 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ב"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 17 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ג"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 18 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ד"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 19 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ה"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 20 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ו"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 21 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ש"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 22 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="א"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 23 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ב"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 24 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ג"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 25 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ד"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 26 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ה"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 27 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ו"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 28 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ש"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 29 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="א"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 30 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ב"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+                <!-- יום 31 -->
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="ג"
+                    android:textStyle="bold"
+                    android:background="@drawable/calendar_cell_border" />
+
+            </LinearLayout>
+
+            <!-- שורות החודשים -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/monthsRecyclerView"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+        </LinearLayout>
+
+    </HorizontalScrollView>
 
 </LinearLayout>

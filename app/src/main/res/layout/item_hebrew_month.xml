@@ -1,90 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_width="wrap_content"
+    android:layout_height="40dp"
     android:orientation="horizontal"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp">
+    android:paddingTop="2dp"
+    android:paddingBottom="2dp">
 
+    ```
     <!-- שם החודש -->
     <TextView
         android:id="@+id/monthName"
         android:layout_width="70dp"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:gravity="center"
         android:text="תשרי"
         android:textSize="16sp"
-        android:textStyle="bold" />
+        android:textStyle="bold"
+        android:background="@drawable/calendar_cell_border" />
 
-    <!-- ראשון -->
-    <TextView
-        android:id="@+id/sunday"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:text="1,8,15,22,29"
-        android:textSize="13sp" />
-
-    <!-- שני -->
-    <TextView
-        android:id="@+id/monday"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:text="2,9,16,23,30"
-        android:textSize="13sp" />
-
-    <!-- שלישי -->
-    <TextView
-        android:id="@+id/tuesday"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:text="3,10,17,24"
-        android:textSize="13sp" />
-
-    <!-- רביעי -->
-    <TextView
-        android:id="@+id/wednesday"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:text="4,11,18,25"
-        android:textSize="13sp" />
-
-    <!-- חמישי -->
-    <TextView
-        android:id="@+id/thursday"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:text="5,12,19,26"
-        android:textSize="13sp" />
-
-    <!-- שישי -->
-    <TextView
-        android:id="@+id/friday"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:text="6,13,20,27"
-        android:textSize="13sp" />
-
-    <!-- שבת -->
-    <TextView
-        android:id="@+id/saturday"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:text="7,14,21,28"
-        android:textSize="13sp" />
+    <!-- כאן ה-Adapter ייצור את כל התאים של ימי החודש -->
+    <LinearLayout
+        android:id="@+id/daysContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="horizontal" />
+    ```
 
 </LinearLayout>
