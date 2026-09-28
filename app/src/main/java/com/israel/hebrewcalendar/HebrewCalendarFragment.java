@@ -11,6 +11,16 @@ import androidx.fragment.app.Fragment;
 import android.icu.util.HebrewCalendar;
 import java.util.Calendar;
 
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.DocumentSnapshot;
+
+import java.util.HashMap;
+import java.util.Map;
+
+
 public class HebrewCalendarFragment extends Fragment {
 
     private CalendarTableView calendarView;
@@ -18,14 +28,38 @@ public class HebrewCalendarFragment extends Fragment {
     private HorizontalScrollView horizontalScroll;
     private ScrollView verticalScroll;
 
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
+
+    // המידע של המשתמש לפי תאריך לועזי
+    private final Map<String, String> calendarEntries = new HashMap<>();
+
+
     public HebrewCalendarFragment() {
         super(R.layout.fragment_calendar);
+    }
+
+
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        if (mAuth != null) {
+            loadCalendarEntries();
+        }
     }
 
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
+
+        loadCalendarEntries();
+
 
         calendarContainer = view.findViewById(R.id.calendarContainer);
         horizontalScroll = view.findViewById(R.id.horizontalScroll);
@@ -95,6 +129,49 @@ public class HebrewCalendarFragment extends Fragment {
             });
         });
     }
+
+    private void loadCalendarEntries() {
+
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+
+        if (currentUser == null) {
+            return;
+        }
+
+        String userId = currentUser.getUid();
+
+        db.collection("users")
+                .document(userId)
+                .collection("calendarEntries")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+
+                    calendarEntries.clear();
+
+                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+
+                        String date = document.getString("gregorianDate");
+                        String title = document.getString("title");
+
+                        if (date != null && title != null && !title.isEmpty()) {
+                            calendarEntries.put(date, title);
+                        }
+                    }
+
+                    if (calendarView != null) {
+                        calendarView.invalidate();
+                    }
+                })
+                .addOnFailureListener(e -> {
+
+                    Toast.makeText(
+                            requireContext(),
+                            "טעינת הנתונים נכשלה: " + e.getMessage(),
+                            Toast.LENGTH_LONG
+                    ).show();
+                });
+    }
+
 
     private class CalendarTableView extends View {
 
@@ -333,6 +410,40 @@ public class HebrewCalendarFragment extends Fragment {
                         getHebrewDay(year, month, day),
                         x, top + ROW_HEIGHT * 2, DAY_WIDTH, ROW_HEIGHT, false
                 );
+
+                String gregorianDate =
+                        String.format(
+                                java.util.Locale.getDefault(),
+                                "%02d/%02d/%04d",
+                                day,
+                                month + 1,
+                                year
+                        );
+
+                String entryTitle = calendarEntries.get(gregorianDate);
+
+                if (entryTitle != null && !entryTitle.isEmpty()) {
+
+                    fill.setColor(Color.rgb(255, 235, 120));
+
+                    canvas.drawRect(
+                            x,
+                            top + ROW_HEIGHT * 5,
+                            x + DAY_WIDTH,
+                            top + ROW_HEIGHT * 6,
+                            fill
+                    );
+
+                    centeredText(
+                            canvas,
+                            entryTitle,
+                            x,
+                            top + ROW_HEIGHT * 5,
+                            DAY_WIDTH,
+                            ROW_HEIGHT,
+                            true
+                    );
+                }
             }
 
             drawHolidayRow(canvas, year, month, days, top, empty);
@@ -591,17 +702,25 @@ public class HebrewCalendarFragment extends Fragment {
             return true;
         }
 
+
+
+
         private void handleClick(float x, float y) {
             float realX = x / scaleFactor;
             float realY = y / scaleFactor;
 
             int monthIndex = (int) (realY / MONTH_HEIGHT);
+
             if (monthIndex < 0 || monthIndex >= MONTHS) return;
+
+            // לחיצה על אזור החודש/השנה לא נחשבת לחיצה על יום
             if (realX >= DAYS * DAY_WIDTH) return;
 
             int position = DAYS - 1 - (int) (realX / DAY_WIDTH);
+
             if (position < 0 || position >= DAYS) return;
 
+            // קביעת החודש
             Calendar selected = Calendar.getInstance();
             selected.set(selectedYear, START_MONTH, 1);
             selected.add(Calendar.MONTH, monthIndex);
@@ -609,21 +728,76 @@ public class HebrewCalendarFragment extends Fragment {
             int year = selected.get(Calendar.YEAR);
             int month = selected.get(Calendar.MONTH);
 
+            // מציאת היום הראשון בחודש
             Calendar first = Calendar.getInstance();
             first.set(year, month, 1);
 
             int empty = first.get(Calendar.DAY_OF_WEEK) - 1;
+
+            // חישוב מספר היום
             int day = position - empty + 1;
 
-            if (day < 1 || day > selected.getActualMaximum(Calendar.DAY_OF_MONTH))
-                return;
+            // בדיקה שהיום באמת קיים בחודש
+            int maxDay = selected.getActualMaximum(Calendar.DAY_OF_MONTH);
 
-            Toast.makeText(
-                    requireContext(),
-                    day + " " + hebrewMonths[month] + " " + year,
-                    Toast.LENGTH_SHORT
-            ).show();
+            if (day < 1 || day > maxDay) return;
+
+            // יצירת תאריך לועזי
+            Calendar selectedDate = Calendar.getInstance();
+            selectedDate.set(year, month, day);
+
+            // יצירת תאריך עברי
+            HebrewCalendar hebrewCalendar = new HebrewCalendar();
+            hebrewCalendar.setTimeInMillis(selectedDate.getTimeInMillis());
+
+            int hebrewDay =
+                    hebrewCalendar.get(HebrewCalendar.DAY_OF_MONTH);
+
+            // שם החודש העברי
+            String hebrewMonth =
+                    getHebrewMonthName(year, month);
+
+
+
+
+            int hebrewYear =
+                    hebrewCalendar.get(HebrewCalendar.YEAR);
+
+            String hebrewDate =
+                    hebrewNumber(hebrewDay)
+                            + " ב"
+                            + hebrewMonth
+                            + " "
+                            + hebrewYear;
+
+
+            // תאריך לועזי
+            String gregorianDate =
+                    String.format(
+                            java.util.Locale.getDefault(),
+                            "%02d/%02d/%04d",
+                            day,
+                            month + 1,
+                            year
+                    );
+
+
+
+            // פתיחת מסך פרטי היום
+            android.content.Intent intent =
+                    new android.content.Intent(
+                            requireContext(),
+                            DayDetailsActivity.class
+                    );
+
+            intent.putExtra("gregorian_date", gregorianDate);
+            intent.putExtra("hebrew_date", hebrewDate);
+
+            startActivity(intent);
         }
+
+
+
 
         @Override
         public boolean performClick() {

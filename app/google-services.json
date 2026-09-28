@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "161093336404",
+    "project_id": "hebrewcalendar-e0971",
+    "storage_bucket": "hebrewcalendar-e0971.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:161093336404:android:4efc6b3c0b146bbaee9cc1",
+        "android_client_info": {
+          "package_name": "com.israel.hebrewcalendar"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "161093336404-fbvom0d4s354cpanefvvvs5i48nkm3uf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.israel.hebrewcalendar",
+            "certificate_hash": "2957df36e2f38a2da09e3d2b0db652a12c90a08d"
+          }
+        },
+        {
+          "client_id": "161093336404-rmucaq9snq6159vf3rmtn2uduqau8mir.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDT8ga7j6gOT_96TjN21BUc0giJ-cYyJo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "161093336404-rmucaq9snq6159vf3rmtn2uduqau8mir.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
