@@ -13,40 +13,31 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         EdgeToEdge.enable(this);
-
         setContentView(R.layout.activity_main);
 
         ViewCompat.setOnApplyWindowInsetsListener(
                 findViewById(R.id.main),
                 (v, insets) -> {
-
-                    Insets systemBars = insets.getInsets(
+                    Insets bars = insets.getInsets(
                             WindowInsetsCompat.Type.systemBars()
                     );
-
                     v.setPadding(
-                            systemBars.left,
-                            systemBars.top,
-                            systemBars.right,
-                            systemBars.bottom
+                            bars.left,
+                            bars.top,
+                            bars.right,
+                            bars.bottom
                     );
-
                     return insets;
                 }
         );
 
-        // פתיחת לוח השנה בתוך ה-Fragment
         if (savedInstanceState == null) {
-
             getSupportFragmentManager()
                     .beginTransaction()
-                    .replace(
-                            R.id.main,
-                            new HebrewCalendarFragment()
-                    )
+                    .replace(R.id.main, new HebrewCalendarFragment())
                     .commit();
         }
     }
+
 }
