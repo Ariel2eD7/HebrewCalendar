@@ -22,6 +22,7 @@ public class HebrewCalendarFragment extends Fragment {
         super(R.layout.fragment_calendar);
     }
 
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
