@@ -1,11 +1,10 @@
-package com.israel.hebrewcalendar;
+        package com.israel.hebrewcalendar;
 
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.*;
 import android.os.Bundle;
 import android.view.*;
-import android.view.ScaleGestureDetector;
 import android.widget.*;
 
 import androidx.annotation.NonNull;
@@ -32,8 +31,7 @@ public class HebrewCalendarFragment extends Fragment {
     private CalendarTableView calendarView;
 
     private FrameLayout calendarContainer;
-    private HorizontalScrollView horizontalScroll;
-    private ScrollView verticalScroll;
+    private FrameLayout calendarViewport;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -64,29 +62,83 @@ public class HebrewCalendarFragment extends Fragment {
 
         super.onViewCreated(view, savedInstanceState);
 
+
         mAuth = FirebaseAuth.getInstance();
+
         db = FirebaseFirestore.getInstance();
+
+
+        calendarViewport =
+                view.findViewById(R.id.calendarViewport);
+
 
         calendarContainer =
                 view.findViewById(R.id.calendarContainer);
 
-        horizontalScroll =
-                view.findViewById(R.id.horizontalScroll);
-
-        verticalScroll =
-                view.findViewById(R.id.verticalScroll);
 
         Spinner yearSpinner =
                 view.findViewById(R.id.yearSpinner);
 
 
+        Button logoutButton =
+                view.findViewById(R.id.logoutButton);
+
+
+        logoutButton.setOnClickListener(v -> {
+
+            mAuth.signOut();
+
+            Intent intent =
+                    new Intent(
+                            requireContext(),
+                            LoginActivity.class
+                    );
+
+            intent.setFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK |
+                            Intent.FLAG_ACTIVITY_CLEAR_TASK
+            );
+
+            startActivity(intent);
+        });
+
+
+        /*
+         * ============================================================
+         * יצירת הלוח
+         * ============================================================
+         */
+
         calendarView =
                 new CalendarTableView(requireContext());
 
 
-        Integer[] years = new Integer[21];
+        calendarContainer.removeAllViews();
 
-        for (int i = 0; i < years.length; i++) {
+
+        calendarContainer.addView(
+                calendarView,
+                new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                )
+        );
+
+
+        /*
+         * ============================================================
+         * שנים לבחירה
+         * ============================================================
+         */
+
+        Integer[] years =
+                new Integer[21];
+
+
+        for (int i = 0;
+             i < years.length;
+             i++) {
+
             years[i] = 2020 + i;
         }
 
@@ -98,11 +150,54 @@ public class HebrewCalendarFragment extends Fragment {
                         years
                 );
 
+
         adapter.setDropDownViewResource(
                 android.R.layout.simple_spinner_dropdown_item
         );
 
+
         yearSpinner.setAdapter(adapter);
+
+
+        /*
+         * ============================================================
+         * פתיחה תמיד על 2025
+         *
+         * 2020 הוא position 0
+         * לכן 2025 הוא position 5.
+         * ============================================================
+         */
+
+        final int DEFAULT_YEAR = 2025;
+
+        int defaultPosition = 0;
+
+        for (int i = 0; i < years.length; i++) {
+
+            if (years[i] == DEFAULT_YEAR) {
+
+                defaultPosition = i;
+
+                break;
+            }
+        }
+
+
+        /*
+         * מגדירים קודם את השנה בלוח.
+         */
+        calendarView.selectedYear =
+                DEFAULT_YEAR;
+
+
+        /*
+         * לאחר שה-Spinner מוגדר,
+         * בוחרים בו את 2025.
+         */
+        yearSpinner.setSelection(
+                defaultPosition,
+                false
+        );
 
 
         yearSpinner.setOnItemSelectedListener(
@@ -115,10 +210,36 @@ public class HebrewCalendarFragment extends Fragment {
                             int position,
                             long id) {
 
+                        Integer selected =
+                                (Integer)
+                                        parent.getItemAtPosition(
+                                                position
+                                        );
+
+
+                        if (selected == null) {
+                            return;
+                        }
+
+
                         calendarView.selectedYear =
-                                (Integer) parent.getItemAtPosition(position);
+                                selected;
+
 
                         calendarView.invalidate();
+
+
+                        /*
+                         * אם עברנו ל-2025,
+                         * מחזירים את הלוח אל היום הנוכחי
+                         * אם הוא נמצא בתוך 2025.
+                         */
+                        if (selected == 2025) {
+
+                            calendarView.post(() ->
+                                    calendarView.focusOnToday()
+                            );
+                        }
                     }
 
 
@@ -130,83 +251,42 @@ public class HebrewCalendarFragment extends Fragment {
         );
 
 
-        calendarContainer.removeAllViews();
-
-
-        int w =
-                calendarView.getCalendarWidth();
-
-        int h =
-                calendarView.getCalendarHeight();
-
-
-        calendarContainer.addView(
-                calendarView,
-                new FrameLayout.LayoutParams(w, h)
-        );
-
-
-        FrameLayout.LayoutParams cp =
-                (FrameLayout.LayoutParams)
-                        calendarContainer.getLayoutParams();
-
-
-        if (cp == null) {
-
-            cp =
-                    new FrameLayout.LayoutParams(w, h);
-
-        } else {
-
-            cp.width = w;
-            cp.height = h;
-        }
-
-
-        calendarContainer.setLayoutParams(cp);
-
-
-        horizontalScroll.post(() -> {
-
-            horizontalScroll.requestLayout();
-            verticalScroll.requestLayout();
-
-            horizontalScroll.post(() -> {
-
-                View child =
-                        horizontalScroll.getChildAt(0);
-
-                if (child == null) {
-                    return;
-                }
-
-
-                int contentWidth =
-                        child.getMeasuredWidth();
-
-
-                if (contentWidth <= 0) {
-
-                    contentWidth =
-                            calendarContainer.getMeasuredWidth();
-                }
-
-
-                horizontalScroll.scrollTo(
-                        Math.max(
-                                0,
-                                contentWidth -
-                                        horizontalScroll.getWidth()
-                        ),
-                        0
-                );
-            });
-        });
-
+        /*
+         * ============================================================
+         * טעינת הנתונים
+         * ============================================================
+         */
 
         loadCalendarEntries();
+
+
+        /*
+         * ============================================================
+         * לאחר שה-View קיבל גודל אמיתי:
+         *
+         * פותחים על 2025
+         * ומנסים להתמקד ביום הנוכחי.
+         *
+         * אם היום אינו ב-2025,
+         * הלוח נשאר במיקום ההתחלתי.
+         * ============================================================
+         */
+
+        calendarView.post(() -> {
+
+            calendarView.selectedYear =
+                    DEFAULT_YEAR;
+
+            calendarView.focusOnToday();
+        });
     }
 
+
+    /*
+     * ============================================================
+     * טעינת אירועים
+     * ============================================================
+     */
 
     private void loadCalendarEntries() {
 
@@ -236,7 +316,9 @@ public class HebrewCalendarFragment extends Fragment {
                             querySnapshot.getDocuments()) {
 
                         String date =
-                                document.getString("gregorianDate");
+                                document.getString(
+                                        "gregorianDate"
+                                );
 
 
                         if (date == null ||
@@ -259,23 +341,33 @@ public class HebrewCalendarFragment extends Fragment {
 
 
                         entry.hebrewDate =
-                                document.getString("hebrewDate");
+                                document.getString(
+                                        "hebrewDate"
+                                );
 
 
                         entry.type =
-                                document.getString("type");
+                                document.getString(
+                                        "type"
+                                );
 
 
                         entry.title =
-                                document.getString("title");
+                                document.getString(
+                                        "title"
+                                );
 
 
                         entry.time =
-                                document.getString("time");
+                                document.getString(
+                                        "time"
+                                );
 
 
                         entry.description =
-                                document.getString("description");
+                                document.getString(
+                                        "description"
+                                );
 
 
                         if (!calendarEntries.containsKey(date)) {
@@ -294,6 +386,7 @@ public class HebrewCalendarFragment extends Fragment {
 
 
                     if (calendarView != null) {
+
                         calendarView.invalidate();
                     }
 
@@ -315,6 +408,12 @@ public class HebrewCalendarFragment extends Fragment {
     }
 
 
+    /*
+     * ============================================================
+     * מודל אירוע
+     * ============================================================
+     */
+
     public static class CalendarEntry {
 
         String id;
@@ -330,9 +429,16 @@ public class HebrewCalendarFragment extends Fragment {
     }
 
 
+    /*
+     * ============================================================
+     * הלוח
+     * ============================================================
+     */
+
     private class CalendarTableView extends View {
 
         private final float density;
+
 
         private final int DAYS = 37;
 
@@ -349,72 +455,311 @@ public class HebrewCalendarFragment extends Fragment {
         private final int TABLE_HEIGHT;
 
 
-        private int selectedYear = 2026;
+        private int selectedYear = 2025;
+
 
         private final int START_MONTH =
                 Calendar.DECEMBER;
 
 
+        /*
+         * ========================================================
+         * יום נוכחי
+         * ========================================================
+         */
+
+        private boolean isToday(
+                int year,
+                int month,
+                int day) {
+
+            Calendar today =
+                    Calendar.getInstance();
+
+
+            return today.get(Calendar.YEAR) == year
+                    && today.get(Calendar.MONTH) == month
+                    && today.get(Calendar.DAY_OF_MONTH) == day;
+        }
+
+
+        /*
+         * ========================================================
+         * זום
+         * ========================================================
+         */
+
         private float scaleFactor = 1f;
 
-        private final float MAX_SCALE = 3f;
+        private final float MAX_SCALE = 4f;
+
+
+        private float getMinScale() {
+
+            if (getWidth() <= 0 ||
+                    getHeight() <= 0) {
+
+                return 0.25f;
+            }
+
+
+            float scaleX =
+                    getWidth() /
+                            (float) TABLE_WIDTH;
+
+
+            float scaleY =
+                    getHeight() /
+                            (float) TABLE_HEIGHT;
+
+
+            return Math.min(
+                    scaleX,
+                    scaleY
+            );
+        }
+
+        private void drawTodayBorder(
+                Canvas canvas,
+                int year,
+                int month,
+                int days,
+                float top,
+                int empty) {
+
+            Calendar today =
+                    Calendar.getInstance();
+
+
+            int todayYear =
+                    today.get(Calendar.YEAR);
+
+            int todayMonth =
+                    today.get(Calendar.MONTH);
+
+            int todayDay =
+                    today.get(Calendar.DAY_OF_MONTH);
+
+
+            /*
+             * האם החודש שאנחנו מציירים
+             * הוא החודש הנוכחי?
+             */
+            if (year != todayYear ||
+                    month != todayMonth) {
+
+                return;
+            }
+
+
+            /*
+             * מיקום היום בתוך השורה.
+             */
+            int position =
+                    empty +
+                            todayDay -
+                            1;
+
+
+            if (position < 0 ||
+                    position >= DAYS) {
+
+                return;
+            }
+
+
+            /*
+             * בגלל שהלוח מצויר מימין לשמאל:
+             */
+            float x =
+                    (DAYS - position - 1)
+                            * DAY_WIDTH;
+
+
+            /*
+             * המסגרת מקיפה את כל 7 השורות
+             * של אותו יום.
+             */
+            float y =
+                    top;
+
+
+            float right =
+                    x +
+                            DAY_WIDTH;
+
+
+            float bottom =
+                    top +
+                            MONTH_HEIGHT;
+
+
+            /*
+             * מסגרת בולטת וברורה.
+             */
+            border.setStyle(
+                    Paint.Style.STROKE
+            );
+
+
+            border.setColor(
+                    Color.rgb(
+                            25,
+                            118,
+                            210
+                    )
+            );
+
+
+            border.setStrokeWidth(
+                    dp(3)
+            );
+
+
+            /*
+             * מעט שקיפות כדי שהצבעים
+             * שבתוך היום עדיין יישארו נראים.
+             */
+            border.setAlpha(255);
+
+
+            canvas.drawRect(
+                    x + dp(2),
+                    y + dp(2),
+                    right - dp(2),
+                    bottom - dp(2),
+                    border
+            );
+        }
+
+
+
 
         private final ScaleGestureDetector scaleDetector;
+
+
+        /*
+         * ========================================================
+         * Frozen columns
+         * ========================================================
+         */
+
+        private float getFrozenWidth() {
+
+            return (MONTH_WIDTH + YEAR_WIDTH)
+                    * scaleFactor;
+        }
+
+
+        private float getScrollableWidth() {
+
+            return DAYS
+                    * DAY_WIDTH
+                    * scaleFactor;
+        }
+
+
+        /*
+         * ========================================================
+         * Pan
+         * ========================================================
+         */
+
+        private float panX = 0f;
+        private float panY = 0f;
+
+
+        private float lastTouchX;
+        private float lastTouchY;
 
 
         private float downX;
         private float downY;
 
+
         private boolean moved;
 
-        private static final int TOUCH_SLOP = 20;
+
+        private static final int TOUCH_SLOP = 12;
 
 
         /*
-         * צבעי הלוח
+         * ========================================================
+         * צבעים
+         * ========================================================
          */
+
         private final int COLOR_YELLOW =
                 Color.rgb(255, 230, 153);
+
 
         private final int COLOR_BLUE =
                 Color.rgb(189, 215, 238);
 
+
         private final int COLOR_PINK =
                 Color.rgb(255, 153, 255);
 
+
         private final int COLOR_GREEN =
                 Color.rgb(198, 224, 180);
+
 
         private final int COLOR_GRAY =
                 Color.rgb(174, 170, 170);
 
 
-        /*
-         * צבעי הנקודות
-         */
         private final int COLOR_EVENT =
                 Color.rgb(52, 120, 246);
+
 
         private final int COLOR_INCOME =
                 Color.rgb(46, 160, 67);
 
+
         private final int COLOR_EXPENSE =
                 Color.rgb(220, 53, 69);
+
 
         private final int COLOR_NOTE =
                 Color.rgb(245, 180, 40);
 
 
+        /*
+         * צבע סימון היום
+         */
+
+        private final int COLOR_TODAY =
+                Color.rgb(25, 118, 210);
+
+
+        private final int COLOR_TODAY_BACKGROUND =
+                Color.rgb(225, 240, 255);
+
+
+        /*
+         * ========================================================
+         * Paint
+         * ========================================================
+         */
+
         private final Paint fill =
                 new Paint(Paint.ANTI_ALIAS_FLAG);
+
 
         private final Paint line =
                 new Paint(Paint.ANTI_ALIAS_FLAG);
 
+
         private final Paint text =
                 new Paint(Paint.ANTI_ALIAS_FLAG);
 
+
         private final Paint border =
+                new Paint(Paint.ANTI_ALIAS_FLAG);
+
+
+        private final Paint todayPaint =
                 new Paint(Paint.ANTI_ALIAS_FLAG);
 
 
@@ -447,6 +792,333 @@ public class HebrewCalendarFragment extends Fragment {
         };
 
 
+        @Override
+        protected void onSizeChanged(
+                int width,
+                int height,
+                int oldWidth,
+                int oldHeight) {
+
+            super.onSizeChanged(
+                    width,
+                    height,
+                    oldWidth,
+                    oldHeight
+            );
+
+
+            if (oldWidth == 0 &&
+                    oldHeight == 0) {
+
+                scaleFactor =
+                        getMinScale();
+
+                panX = 0;
+                panY = 0;
+
+                clampPan();
+            }
+        }
+
+
+        /*
+         * ========================================================
+         * התמקדות ביום הנוכחי
+         * ========================================================
+         */
+
+
+        private void focusOnToday() {
+
+            Calendar today =
+                    Calendar.getInstance();
+
+            int todayYear =
+                    today.get(Calendar.YEAR);
+
+            int todayMonth =
+                    today.get(Calendar.MONTH);
+
+            int todayDay =
+                    today.get(Calendar.DAY_OF_MONTH);
+
+
+            /*
+             * ========================================================
+             * הלוח מתחיל בדצמבר של selectedYear
+             * ומציג 13 חודשים.
+             *
+             * לדוגמה:
+             *
+             * 2025:
+             * דצמבר 2025
+             * ינואר 2026
+             * ...
+             * דצמבר 2026
+             * ========================================================
+             */
+
+            Calendar calendarStart =
+                    Calendar.getInstance();
+
+            calendarStart.set(
+                    selectedYear,
+                    START_MONTH,
+                    1
+            );
+
+
+            Calendar calendarEnd =
+                    (Calendar) calendarStart.clone();
+
+            calendarEnd.add(
+                    Calendar.MONTH,
+                    MONTHS
+            );
+
+            calendarEnd.add(
+                    Calendar.DAY_OF_MONTH,
+                    -1
+            );
+
+
+            Calendar todayDate =
+                    Calendar.getInstance();
+
+            todayDate.set(
+                    todayYear,
+                    todayMonth,
+                    todayDay
+            );
+
+
+            /*
+             * היום חייב להיות בתוך 13 החודשים
+             * שמוצגים בלוח.
+             */
+            if (todayDate.before(calendarStart) ||
+                    todayDate.after(calendarEnd)) {
+
+                invalidate();
+
+                return;
+            }
+
+
+            /*
+             * ========================================================
+             * מציאת החודש שבו נמצא היום.
+             * ========================================================
+             */
+
+            Calendar monthStart =
+                    Calendar.getInstance();
+
+            monthStart.set(
+                    selectedYear,
+                    START_MONTH,
+                    1
+            );
+
+
+            int monthIndex = 0;
+
+
+            while (monthIndex < MONTHS) {
+
+                Calendar currentMonth =
+                        (Calendar) monthStart.clone();
+
+                currentMonth.add(
+                        Calendar.MONTH,
+                        monthIndex
+                );
+
+
+                if (currentMonth.get(Calendar.YEAR)
+                        == todayYear
+                        &&
+                        currentMonth.get(Calendar.MONTH)
+                                == todayMonth) {
+
+                    break;
+                }
+
+
+                monthIndex++;
+            }
+
+
+            if (monthIndex >= MONTHS) {
+
+                invalidate();
+
+                return;
+            }
+
+
+            /*
+             * ========================================================
+             * מציאת המיקום של היום בתוך החודש.
+             * ========================================================
+             */
+
+            Calendar first =
+                    Calendar.getInstance();
+
+            first.set(
+                    todayYear,
+                    todayMonth,
+                    1
+            );
+
+
+            int empty =
+                    first.get(
+                            Calendar.DAY_OF_WEEK
+                    ) - 1;
+
+
+            int position =
+                    empty +
+                            todayDay -
+                            1;
+
+
+            if (position < 0 ||
+                    position >= DAYS) {
+
+                invalidate();
+
+                return;
+            }
+
+
+            /*
+             * הלוח מצויר מימין לשמאל.
+             */
+            float dayX =
+                    (DAYS - position - 1)
+                            * DAY_WIDTH;
+
+
+            float dayY =
+                    monthIndex *
+                            MONTH_HEIGHT;
+
+
+            /*
+             * זום התחלתי.
+             *
+             * בגלל ששתי עמודות קפואות נמצאות
+             * בצד ימין, לא כדאי לבצע זום גדול מדי.
+             *
+             * 1.25 נותן הגדלה נעימה ועדיין משאיר
+             * את היום הנוכחי גלוי באזור הימים.
+             */
+            float targetScale =
+                    Math.max(
+                            getMinScale(),
+                            1.25f
+                    );
+
+            targetScale =
+                    Math.min(
+                            targetScale,
+                            MAX_SCALE
+                    );
+
+            scaleFactor =
+                    targetScale;
+
+
+
+            /*
+             * ========================================================
+             * האזור שבו באמת אפשר לראות
+             * את עמודות הימים.
+             *
+             * שתי העמודות הקפואות נמצאות מימין,
+             * ולכן אסור למרכז את היום בתוך
+             * כל רוחב ה-View.
+             * ========================================================
+             */
+
+            float frozenWidth =
+                    getFrozenWidth();
+
+
+            float daysViewportWidth =
+                    getWidth() -
+                            frozenWidth;
+
+
+            /*
+             * מרכז אזור הימים בלבד.
+             */
+            float daysViewportCenterX =
+                    daysViewportWidth / 2f;
+
+
+            /*
+             * מרכז התא של היום.
+             */
+            float targetX =
+                    dayX +
+                            DAY_WIDTH / 2f;
+
+
+            /*
+             * ========================================================
+             * מרכז אנכי.
+             *
+             * כאן אין עמודות קפואות אנכיות,
+             * לכן אפשר להשתמש בכל גובה ה-View.
+             * ========================================================
+             */
+
+            float targetY =
+                    dayY +
+                            MONTH_HEIGHT / 2f;
+
+
+            /*
+             * ========================================================
+             * מיקום אופקי.
+             *
+             * חשוב:
+             *
+             * היום צריך להיות במרכז אזור הימים,
+             * לא במרכז כל המסך.
+             * ========================================================
+             */
+
+            panX =
+                    daysViewportCenterX
+                            - targetX * scaleFactor;
+
+
+            /*
+             * מיקום אנכי.
+             */
+            panY =
+                    getHeight() / 2f
+                            - targetY * scaleFactor;
+
+
+            /*
+             * מגבילים את המיקום
+             * כדי שלא נצא מגבולות הלוח.
+             */
+            clampPan();
+
+
+            invalidate();
+        }
+
+
+
+
         CalendarTableView(Context context) {
 
             super(context);
@@ -461,14 +1133,18 @@ public class HebrewCalendarFragment extends Fragment {
             DAY_WIDTH =
                     dp(55);
 
+
             ROW_HEIGHT =
                     dp(34);
+
 
             MONTH_WIDTH =
                     dp(120);
 
+
             YEAR_WIDTH =
                     dp(85);
+
 
             MONTH_HEIGHT =
                     ROW_HEIGHT * 7;
@@ -493,12 +1169,18 @@ public class HebrewCalendarFragment extends Fragment {
                     Paint.Style.STROKE
             );
 
+
             line.setStrokeWidth(
                     dp(1)
             );
 
+
             line.setColor(
-                    Color.rgb(40, 40, 40)
+                    Color.rgb(
+                            40,
+                            40,
+                            40
+                    )
             );
 
 
@@ -506,9 +1188,11 @@ public class HebrewCalendarFragment extends Fragment {
                     Color.BLACK
             );
 
+
             text.setTextSize(
                     dp(12)
             );
+
 
             text.setAntiAlias(
                     true
@@ -519,14 +1203,31 @@ public class HebrewCalendarFragment extends Fragment {
                     Paint.Style.STROKE
             );
 
+
             border.setColor(
                     Color.BLACK
+            );
+
+
+            todayPaint.setStyle(
+                    Paint.Style.STROKE
+            );
+
+
+            todayPaint.setStrokeWidth(
+                    dp(3)
+            );
+
+
+            todayPaint.setColor(
+                    COLOR_TODAY
             );
 
 
             setBackgroundColor(
                     Color.WHITE
             );
+
 
             setClickable(true);
 
@@ -542,136 +1243,177 @@ public class HebrewCalendarFragment extends Fragment {
         private int dp(int value) {
 
             return (int)
-                    (value * density + .5f);
+                    (
+                            value *
+                                    density
+                                    + .5f
+                    );
         }
 
 
         int getCalendarWidth() {
 
-            return Math.round(
-                    TABLE_WIDTH *
-                            scaleFactor
-            );
+            return TABLE_WIDTH;
         }
 
 
         int getCalendarHeight() {
 
-            return Math.round(
-                    TABLE_HEIGHT *
-                            scaleFactor
-            );
+            return TABLE_HEIGHT;
         }
 
 
-        private float getMinimumScale() {
+        private void clampPan() {
 
-            if (horizontalScroll == null ||
-                    verticalScroll == null) {
-
-                return .1f;
-            }
+            float viewportWidth =
+                    getWidth();
 
 
-            int w =
-                    horizontalScroll.getWidth();
-
-            int h =
-                    verticalScroll.getHeight();
+            float viewportHeight =
+                    getHeight();
 
 
-            if (w <= 0 || h <= 0) {
-                return .1f;
-            }
+            float frozenWidth =
+                    getFrozenWidth();
 
 
-            return Math.max(
-                    .1f,
-                    Math.min(
-                            (float) w /
-                                    TABLE_WIDTH,
-
-                            (float) h /
-                                    TABLE_HEIGHT
-                    )
-            );
-        }
+            float scrollableWidth =
+                    getScrollableWidth();
 
 
-        private void updateViewSize() {
-
-            int w =
-                    getCalendarWidth();
-
-            int h =
-                    getCalendarHeight();
+            float availableWidth =
+                    viewportWidth -
+                            frozenWidth;
 
 
-            ViewGroup.LayoutParams p =
-                    getLayoutParams();
+            if (scrollableWidth <= availableWidth) {
 
-
-            if (p == null) {
-
-                p =
-                        new ViewGroup.LayoutParams(
-                                w,
-                                h
-                        );
+                panX = 0;
 
             } else {
 
-                p.width = w;
-                p.height = h;
-            }
+                float minX =
+                        availableWidth -
+                                scrollableWidth;
 
 
-            setLayoutParams(p);
-
-
-            if (calendarContainer != null) {
-
-                ViewGroup.LayoutParams cp =
-                        calendarContainer
-                                .getLayoutParams();
-
-
-                if (cp == null) {
-
-                    cp =
-                            new ViewGroup.LayoutParams(
-                                    w,
-                                    h
-                            );
-
-                } else {
-
-                    cp.width = w;
-                    cp.height = h;
+                if (panX < minX) {
+                    panX = minX;
                 }
 
 
-                calendarContainer
-                        .setLayoutParams(cp);
+                if (panX > 0) {
+                    panX = 0;
+                }
             }
 
 
-            requestLayout();
+            float contentHeight =
+                    TABLE_HEIGHT *
+                            scaleFactor;
 
 
-            if (horizontalScroll != null) {
-                horizontalScroll.requestLayout();
+            if (contentHeight <= viewportHeight) {
+
+                panY =
+                        (viewportHeight -
+                                contentHeight) / 2f;
+
+            } else {
+
+                float minY =
+                        viewportHeight -
+                                contentHeight;
+
+
+                if (panY < minY) {
+                    panY = minY;
+                }
+
+
+                if (panY > 0) {
+                    panY = 0;
+                }
+            }
+        }
+
+
+        /*
+         * ========================================================
+         * Zoom סביב נקודה
+         * ========================================================
+         */
+
+        private void zoomAround(
+                float newScale,
+                float focusX,
+                float focusY) {
+
+            float minScale =
+                    getMinScale();
+
+
+            newScale =
+                    Math.max(
+                            minScale,
+                            Math.min(
+                                    MAX_SCALE,
+                                    newScale
+                            )
+                    );
+
+
+            float oldScale =
+                    scaleFactor;
+
+
+            if (Math.abs(
+                    newScale -
+                            oldScale
+            ) < .0001f) {
+
+                return;
             }
 
 
-            if (verticalScroll != null) {
-                verticalScroll.requestLayout();
-            }
+            float contentX =
+                    (focusX - panX)
+                            / oldScale;
+
+
+            float contentY =
+                    (focusY - panY)
+                            / oldScale;
+
+
+            scaleFactor =
+                    newScale;
+
+
+            panX =
+                    focusX -
+                            contentX *
+                                    scaleFactor;
+
+
+            panY =
+                    focusY -
+                            contentY *
+                                    scaleFactor;
+
+
+            clampPan();
 
 
             invalidate();
         }
 
+
+        /*
+         * ========================================================
+         * ציור
+         * ========================================================
+         */
 
         @Override
         protected void onDraw(
@@ -685,7 +1427,34 @@ public class HebrewCalendarFragment extends Fragment {
             );
 
 
+            float frozenWidth =
+                    getFrozenWidth();
+
+
+            float frozenLeft =
+                    getWidth() -
+                            frozenWidth;
+
+
+            /*
+             * חלק נגלל
+             */
+
             canvas.save();
+
+
+            canvas.clipRect(
+                    0,
+                    0,
+                    frozenLeft,
+                    getHeight()
+            );
+
+
+            canvas.translate(
+                    panX,
+                    panY
+            );
 
 
             canvas.scale(
@@ -705,12 +1474,66 @@ public class HebrewCalendarFragment extends Fragment {
             }
 
 
-            drawOuterBorder(canvas);
+            canvas.restore();
+
+
+            /*
+             * עמודות קפואות
+             */
+
+            canvas.save();
+
+
+            canvas.clipRect(
+                    frozenLeft,
+                    0,
+                    getWidth(),
+                    getHeight()
+            );
+
+
+            float originalFrozenLeft =
+                    DAYS * DAY_WIDTH;
+
+
+            float frozenTranslationX =
+                    frozenLeft -
+                            originalFrozenLeft *
+                                    scaleFactor;
+
+
+            canvas.translate(
+                    frozenTranslationX,
+                    panY
+            );
+
+
+            canvas.scale(
+                    scaleFactor,
+                    scaleFactor
+            );
+
+
+            for (int i = 0;
+                 i < MONTHS;
+                 i++) {
+
+                drawMonth(
+                        canvas,
+                        i
+                );
+            }
 
 
             canvas.restore();
         }
 
+
+        /*
+         * ========================================================
+         * חודש
+         * ========================================================
+         */
 
         private void drawMonth(
                 Canvas canvas,
@@ -734,11 +1557,15 @@ public class HebrewCalendarFragment extends Fragment {
 
 
             int year =
-                    cal.get(Calendar.YEAR);
+                    cal.get(
+                            Calendar.YEAR
+                    );
 
 
             int month =
-                    cal.get(Calendar.MONTH);
+                    cal.get(
+                            Calendar.MONTH
+                    );
 
 
             int days =
@@ -765,11 +1592,13 @@ public class HebrewCalendarFragment extends Fragment {
 
 
             float top =
-                    index * MONTH_HEIGHT;
+                    index *
+                            MONTH_HEIGHT;
 
 
             float monthX =
-                    DAYS * DAY_WIDTH;
+                    DAYS *
+                            DAY_WIDTH;
 
 
             float yearX =
@@ -778,9 +1607,13 @@ public class HebrewCalendarFragment extends Fragment {
 
 
             /*
-             * רקע כללי
+             * רקע
              */
-            fill.setColor(Color.WHITE);
+
+            fill.setColor(
+                    Color.WHITE
+            );
+
 
             canvas.drawRect(
                     0,
@@ -794,17 +1627,22 @@ public class HebrewCalendarFragment extends Fragment {
             /*
              * ימי החודש
              */
+
             for (int pos = 0;
                  pos < DAYS;
                  pos++) {
 
                 float x =
-                        (DAYS - pos - 1)
+                        (DAYS -
+                                pos -
+                                1)
                                 * DAY_WIDTH;
 
 
                 int day =
-                        pos - empty + 1;
+                        pos -
+                                empty +
+                                1;
 
 
                 int color =
@@ -828,13 +1666,16 @@ public class HebrewCalendarFragment extends Fragment {
                     color =
                             current.get(
                                     Calendar.DAY_OF_WEEK
-                            ) == Calendar.SATURDAY
+                            ) ==
+                                    Calendar.SATURDAY
                                     ? COLOR_BLUE
                                     : COLOR_YELLOW;
                 }
 
 
-                fill.setColor(color);
+                fill.setColor(
+                        color
+                );
 
 
                 canvas.drawRect(
@@ -847,8 +1688,9 @@ public class HebrewCalendarFragment extends Fragment {
 
 
                 /*
-                 * אזור הנתונים הירוק
+                 * אזור ירוק
                  */
+
                 if (day >= 1 &&
                         day <= days) {
 
@@ -871,7 +1713,11 @@ public class HebrewCalendarFragment extends Fragment {
             /*
              * עמודת החודש
              */
-            fill.setColor(COLOR_PINK);
+
+            fill.setColor(
+                    COLOR_PINK
+            );
+
 
             canvas.drawRect(
                     monthX,
@@ -882,7 +1728,10 @@ public class HebrewCalendarFragment extends Fragment {
             );
 
 
-            fill.setColor(COLOR_YELLOW);
+            fill.setColor(
+                    COLOR_YELLOW
+            );
+
 
             canvas.drawRect(
                     monthX,
@@ -892,6 +1741,7 @@ public class HebrewCalendarFragment extends Fragment {
                     fill
             );
 
+
             canvas.drawRect(
                     monthX,
                     top + ROW_HEIGHT * 2,
@@ -899,6 +1749,7 @@ public class HebrewCalendarFragment extends Fragment {
                     top + ROW_HEIGHT * 3,
                     fill
             );
+
 
             canvas.drawRect(
                     monthX,
@@ -909,7 +1760,10 @@ public class HebrewCalendarFragment extends Fragment {
             );
 
 
-            fill.setColor(COLOR_GREEN);
+            fill.setColor(
+                    COLOR_GREEN
+            );
+
 
             canvas.drawRect(
                     monthX,
@@ -920,7 +1774,10 @@ public class HebrewCalendarFragment extends Fragment {
             );
 
 
-            fill.setColor(COLOR_BLUE);
+            fill.setColor(
+                    COLOR_BLUE
+            );
+
 
             canvas.drawRect(
                     monthX,
@@ -934,7 +1791,11 @@ public class HebrewCalendarFragment extends Fragment {
             /*
              * עמודת השנה
              */
-            fill.setColor(COLOR_GRAY);
+
+            fill.setColor(
+                    COLOR_GRAY
+            );
+
 
             canvas.drawRect(
                     yearX,
@@ -948,6 +1809,7 @@ public class HebrewCalendarFragment extends Fragment {
             /*
              * כותרות
              */
+
             centeredText(
                     canvas,
                     "יום בשבוע",
@@ -1032,20 +1894,25 @@ public class HebrewCalendarFragment extends Fragment {
 
 
             /*
-             * הימים והנקודות
+             * ימים
              */
+
             for (int pos = 0;
                  pos < DAYS;
                  pos++) {
 
                 float x =
-                        (DAYS - pos - 1)
+                        (DAYS -
+                                pos -
+                                1)
                                 * DAY_WIDTH;
 
 
                 centeredText(
                         canvas,
-                        hebrewWeekDays[pos % 7],
+                        hebrewWeekDays[
+                                pos % 7
+                                ],
                         x,
                         top,
                         DAY_WIDTH,
@@ -1055,13 +1922,64 @@ public class HebrewCalendarFragment extends Fragment {
 
 
                 int day =
-                        pos - empty + 1;
+                        pos -
+                                empty +
+                                1;
 
 
                 if (day < 1 ||
                         day > days) {
 
                     continue;
+                }
+
+
+                /*
+                 * ==================================================
+                 * סימון היום הנוכחי
+                 * ==================================================
+                 */
+
+                if (isToday(
+                        year,
+                        month,
+                        day
+                )) {
+
+                    /*
+                     * רקע עדין
+                     */
+
+                    fill.setColor(
+                            COLOR_TODAY_BACKGROUND
+                    );
+
+
+                    canvas.drawRect(
+                            x + dp(2),
+                            top + ROW_HEIGHT + dp(2),
+                            x + DAY_WIDTH - dp(2),
+                            top + ROW_HEIGHT * 2 - dp(2),
+                            fill
+                    );
+
+
+                    /*
+                     * מסגרת כחולה סביב היום
+                     */
+
+                    todayPaint.setStrokeWidth(
+                            dp(3)
+                    );
+
+
+                    canvas.drawRect(
+                            x + dp(2),
+                            top + ROW_HEIGHT + dp(2),
+                            x + DAY_WIDTH - dp(2),
+                            top + ROW_HEIGHT * 2 - dp(2),
+                            todayPaint
+                    );
                 }
 
 
@@ -1120,6 +2038,10 @@ public class HebrewCalendarFragment extends Fragment {
             }
 
 
+            /*
+             * חגים
+             */
+
             drawHolidayRow(
                     canvas,
                     year,
@@ -1130,10 +2052,111 @@ public class HebrewCalendarFragment extends Fragment {
             );
 
 
+            /*
+             * ========================================================
+             * סימון היום הנוכחי
+             *
+             * המסגרת מקיפה את כל התאים של אותו יום:
+             *
+             * יום בשבוע
+             * תאריך לועזי
+             * תאריך עברי
+             * חגים ומועדים
+             * הוצאות חזויות
+             * הכנסות חזויות
+             *
+             * כלומר עמודה שלמה בגובה החודש.
+             * ========================================================
+             */
+            drawTodayBorder(
+                    canvas,
+                    year,
+                    month,
+                    days,
+                    top,
+                    empty
+            );
+
+
+            /*
+             * חגים.
+             */
+            drawHolidayRow(
+                    canvas,
+                    year,
+                    month,
+                    days,
+                    top,
+                    empty
+            );
+
+
+            /*
+             * רשת.
+             */
             drawGrid(
                     canvas,
                     top
             );
+
+
+
+
+            /*
+             * רשת
+             */
+
+            drawGrid(
+                    canvas,
+                    top
+            );
+
+
+            /*
+             * סימון היום מצויר שוב
+             * מעל הרשת כדי שהמסגרת תהיה ברורה.
+             */
+
+            for (int day = 1;
+                 day <= days;
+                 day++) {
+
+                if (!isToday(
+                        year,
+                        month,
+                        day
+                )) {
+
+                    continue;
+                }
+
+
+                int position =
+                        empty +
+                                day -
+                                1;
+
+
+                float x =
+                        (DAYS -
+                                position -
+                                1)
+                                * DAY_WIDTH;
+
+
+                todayPaint.setStrokeWidth(
+                        dp(3)
+                );
+
+
+                canvas.drawRect(
+                        x + dp(2),
+                        top + ROW_HEIGHT + dp(2),
+                        x + DAY_WIDTH - dp(2),
+                        top + ROW_HEIGHT * 2 - dp(2),
+                        todayPaint
+                );
+            }
 
 
             border.setStrokeWidth(
@@ -1152,10 +2175,11 @@ public class HebrewCalendarFragment extends Fragment {
 
 
         /*
-         * ============================================================
-         * נקודות צבעוניות +N
-         * ============================================================
+         * ========================================================
+         * נקודות אירועים
+         * ========================================================
          */
+
         private void drawEntryIndicators(
                 Canvas canvas,
                 List<CalendarEntry> entries,
@@ -1168,7 +2192,8 @@ public class HebrewCalendarFragment extends Fragment {
             int noteCount = 0;
 
 
-            for (CalendarEntry entry : entries) {
+            for (CalendarEntry entry :
+                    entries) {
 
                 String type =
                         entry.type == null
@@ -1197,18 +2222,6 @@ public class HebrewCalendarFragment extends Fragment {
             }
 
 
-            /*
-             * כל סוג מקבל נקודה אחת.
-             *
-             * כך למשל אם יש:
-             * 4 אירועים
-             * 2 הכנסות
-             * 1 הוצאה
-             *
-             * נראה:
-             *
-             * 🔵 🟢 🔴 +4
-             */
             List<Integer> colors =
                     new ArrayList<>();
 
@@ -1217,13 +2230,16 @@ public class HebrewCalendarFragment extends Fragment {
                 colors.add(COLOR_EVENT);
             }
 
+
             if (incomeCount > 0) {
                 colors.add(COLOR_INCOME);
             }
 
+
             if (expenseCount > 0) {
                 colors.add(COLOR_EXPENSE);
             }
+
 
             if (noteCount > 0) {
                 colors.add(COLOR_NOTE);
@@ -1231,11 +2247,13 @@ public class HebrewCalendarFragment extends Fragment {
 
 
             float centerX =
-                    x + DAY_WIDTH / 2f;
+                    x +
+                            DAY_WIDTH / 2f;
 
 
             float centerY =
-                    top + ROW_HEIGHT * 5.45f;
+                    top +
+                            ROW_HEIGHT * 5.45f;
 
 
             float radius =
@@ -1246,9 +2264,6 @@ public class HebrewCalendarFragment extends Fragment {
                     dp(10);
 
 
-            /*
-             * כמה נקודות נציג בפועל.
-             */
             int visibleDots =
                     Math.min(
                             colors.size(),
@@ -1258,8 +2273,11 @@ public class HebrewCalendarFragment extends Fragment {
 
             float startX =
                     centerX -
-                            ((visibleDots - 1)
-                                    * spacing / 2f);
+                            (
+                                    (visibleDots - 1)
+                                            * spacing
+                                            / 2f
+                            );
 
 
             for (int i = 0;
@@ -1272,7 +2290,8 @@ public class HebrewCalendarFragment extends Fragment {
 
 
                 canvas.drawCircle(
-                        startX + i * spacing,
+                        startX +
+                                i * spacing,
                         centerY,
                         radius,
                         fill
@@ -1280,46 +2299,43 @@ public class HebrewCalendarFragment extends Fragment {
             }
 
 
-            /*
-             * כמה פריטים מעבר למה
-             * שהנקודות מייצגות.
-             */
-            int totalTypes =
-                    colors.size();
-
-
             int hiddenItems =
                     entries.size() -
                             visibleDots;
 
 
-            if (totalTypes > 3) {
-
-                hiddenItems =
-                        entries.size() - 3;
-            }
-
-
-            /*
-             * אם נשארו פריטים שלא הוצגו,
-             * מציגים +N.
-             */
             if (hiddenItems > 0) {
 
-                text.setColor(Color.BLACK);
-                text.setTypeface(Typeface.DEFAULT_BOLD);
-                text.setTextSize(dp(9));
-                text.setTextAlign(Paint.Align.LEFT);
+                text.setColor(
+                        Color.BLACK
+                );
+
+
+                text.setTypeface(
+                        Typeface.DEFAULT_BOLD
+                );
+
+
+                text.setTextSize(
+                        dp(9)
+                );
+
+
+                text.setTextAlign(
+                        Paint.Align.LEFT
+                );
 
 
                 float plusX =
                         startX +
-                                visibleDots * spacing +
+                                visibleDots *
+                                        spacing +
                                 dp(1);
 
 
                 canvas.drawText(
-                        "+" + hiddenItems,
+                        "+" +
+                                hiddenItems,
                         plusX,
                         centerY +
                                 dp(3),
@@ -1328,6 +2344,12 @@ public class HebrewCalendarFragment extends Fragment {
             }
         }
 
+
+        /*
+         * ========================================================
+         * חגים
+         * ========================================================
+         */
 
         private void drawHolidayRow(
                 Canvas canvas,
@@ -1466,7 +2488,9 @@ public class HebrewCalendarFragment extends Fragment {
                 int empty) {
 
             int pos =
-                    empty + day - 1;
+                    empty +
+                            day -
+                            1;
 
 
             if (day < 1 ||
@@ -1479,7 +2503,9 @@ public class HebrewCalendarFragment extends Fragment {
 
 
             float x =
-                    (DAYS - pos - 1)
+                    (DAYS -
+                            pos -
+                            1)
                             * DAY_WIDTH;
 
 
@@ -1509,6 +2535,12 @@ public class HebrewCalendarFragment extends Fragment {
         }
 
 
+        /*
+         * ========================================================
+         * Grid
+         * ========================================================
+         */
+
         private void drawGrid(
                 Canvas canvas,
                 float top) {
@@ -1518,7 +2550,8 @@ public class HebrewCalendarFragment extends Fragment {
                  i++) {
 
                 float x =
-                        i * DAY_WIDTH;
+                        i *
+                                DAY_WIDTH;
 
 
                 canvas.drawLine(
@@ -1536,7 +2569,9 @@ public class HebrewCalendarFragment extends Fragment {
                  i++) {
 
                 float y =
-                        top + i * ROW_HEIGHT;
+                        top +
+                                i *
+                                        ROW_HEIGHT;
 
 
                 canvas.drawLine(
@@ -1550,23 +2585,11 @@ public class HebrewCalendarFragment extends Fragment {
         }
 
 
-        private void drawOuterBorder(
-                Canvas canvas) {
-
-            border.setStrokeWidth(
-                    dp(2)
-            );
-
-
-            canvas.drawRect(
-                    0,
-                    0,
-                    TABLE_WIDTH,
-                    TABLE_HEIGHT,
-                    border
-            );
-        }
-
+        /*
+         * ========================================================
+         * טקסט
+         * ========================================================
+         */
 
         private void centeredText(
                 Canvas canvas,
@@ -1591,16 +2614,24 @@ public class HebrewCalendarFragment extends Fragment {
             );
 
 
+            text.setColor(
+                    Color.BLACK
+            );
+
+
             text.setTextAlign(
                     Paint.Align.CENTER
             );
 
 
-            text.setTextSize(dp(12));
+            text.setTextSize(
+                    dp(12)
+            );
 
 
             float centerX =
-                    x + width / 2f;
+                    x +
+                            width / 2f;
 
 
             Paint.FontMetrics fm =
@@ -1614,7 +2645,8 @@ public class HebrewCalendarFragment extends Fragment {
 
 
                 float lineHeight =
-                        height / lines.length;
+                        height /
+                                lines.length;
 
 
                 for (int i = 0;
@@ -1635,8 +2667,10 @@ public class HebrewCalendarFragment extends Fragment {
                             lines[i],
                             centerX,
                             centerY -
-                                    (fm.ascent +
-                                            fm.descent) / 2f,
+                                    (
+                                            fm.ascent +
+                                                    fm.descent
+                                    ) / 2f,
                             text
                     );
                 }
@@ -1648,13 +2682,21 @@ public class HebrewCalendarFragment extends Fragment {
                         centerX,
                         y +
                                 height / 2f -
-                                (fm.ascent +
-                                        fm.descent) / 2f,
+                                (
+                                        fm.ascent +
+                                                fm.descent
+                                ) / 2f,
                         text
                 );
             }
         }
 
+
+        /*
+         * ========================================================
+         * חודש עברי
+         * ========================================================
+         */
 
         private String getHebrewMonthName(
                 int year,
@@ -1739,6 +2781,12 @@ public class HebrewCalendarFragment extends Fragment {
         }
 
 
+        /*
+         * ========================================================
+         * יום עברי
+         * ========================================================
+         */
+
         private String getHebrewDay(
                 int year,
                 int month,
@@ -1772,7 +2820,8 @@ public class HebrewCalendarFragment extends Fragment {
         }
 
 
-        private String hebrewNumber(int n) {
+        private String hebrewNumber(
+                int n) {
 
             if (n <= 0) {
                 return "";
@@ -1807,13 +2856,16 @@ public class HebrewCalendarFragment extends Fragment {
 
 
                 return n >= 10
-                        ? "י" + u[n - 10]
+                        ? "י" +
+                        u[n - 10]
                         : u[n];
             }
 
 
             if (n < 30) {
-                return "כ" + u[n - 20];
+
+                return "כ" +
+                        u[n - 20];
             }
 
 
@@ -1832,116 +2884,24 @@ public class HebrewCalendarFragment extends Fragment {
 
 
         /*
-         * ============================================================
-         * זום טבעי כמו Google Sheets
-         * ============================================================
-         *
-         * הרעיון:
-         *
-         * אם האצבעות נמצאות למשל על תא מסוים,
-         * התא הזה חייב להישאר מתחת לאצבעות
-         * גם אחרי שהזום משתנה.
-         *
-         * לכן אנחנו שומרים את נקודת ה-focus
-         * ומתקנים את מיקום שני ה-ScrollViews
-         * אחרי שינוי הזום.
+         * ========================================================
+         * Scale Listener
+         * ========================================================
          */
+
         private class ScaleListener
-                extends ScaleGestureDetector.SimpleOnScaleGestureListener {
-
-            /*
-             * נקודת ה-pinch במסך/ב-View
-             */
-            private float focusX;
-            private float focusY;
-
-            /*
-             * מיקום הגלילה לפני שינוי הזום
-             */
-            private int oldScrollX;
-            private int oldScrollY;
-
-            /*
-             * הזום שהיה לפני השינוי
-             */
-            private float oldScale;
-
-            /*
-             * נקודת התוכן שעליה המשתמש עושה pinch.
-             *
-             * היא נשמרת בקואורדינטות של הטבלה
-             * לפני שינוי הזום.
-             */
-            private float contentFocusX;
-            private float contentFocusY;
+                extends ScaleGestureDetector
+                .SimpleOnScaleGestureListener {
 
 
             @Override
             public boolean onScaleBegin(
                     ScaleGestureDetector detector) {
 
-                oldScale =
-                        scaleFactor;
-
-
-                /*
-                 * נקודת המרכז של שתי האצבעות
-                 */
-                focusX =
-                        detector.getFocusX();
-
-                focusY =
-                        detector.getFocusY();
-
-
-                /*
-                 * מיקום הגלילה הנוכחי
-                 */
-                oldScrollX =
-                        horizontalScroll != null
-                                ? horizontalScroll.getScrollX()
-                                : 0;
-
-
-                oldScrollY =
-                        verticalScroll != null
-                                ? verticalScroll.getScrollY()
-                                : 0;
-
-
-                /*
-                 * המרה מנקודת מסך
-                 * לנקודה אמיתית בתוך הטבלה.
-                 *
-                 * לדוגמה:
-                 *
-                 * scrollX = 500
-                 * focusX = 200
-                 *
-                 * כלומר המשתמש נוגע בנקודה 700
-                 * בתוך התוכן.
-                 */
-                contentFocusX =
-                        (oldScrollX + focusX)
-                                / oldScale;
-
-
-                contentFocusY =
-                        (oldScrollY + focusY)
-                                / oldScale;
-
-
-                /*
-                 * בזמן pinch ה-ScrollViews
-                 * לא צריכים לגנוב את המגע.
-                 */
-                if (getParent() != null) {
-
-                    getParent()
-                            .requestDisallowInterceptTouchEvent(
-                                    true
-                            );
-                }
+                getParent()
+                        .requestDisallowInterceptTouchEvent(
+                                true
+                        );
 
 
                 return true;
@@ -1952,167 +2912,16 @@ public class HebrewCalendarFragment extends Fragment {
             public boolean onScale(
                     ScaleGestureDetector detector) {
 
-                float old =
-                        scaleFactor;
-
-
-                float min =
-                        getMinimumScale();
-
-
-                /*
-                 * שינוי זום חלק.
-                 */
                 float newScale =
                         scaleFactor *
                                 detector.getScaleFactor();
 
 
-                /*
-                 * הגבלת הזום.
-                 */
-                newScale =
-                        Math.max(
-                                min,
-                                Math.min(
-                                        MAX_SCALE,
-                                        newScale
-                                )
-                        );
-
-
-                /*
-                 * אם לא באמת השתנה הזום
-                 * אין צורך לעשות כלום.
-                 */
-                if (Math.abs(
-                        newScale - old
-                ) < 0.0001f) {
-
-                    return true;
-                }
-
-
-                scaleFactor =
-                        newScale;
-
-
-                /*
-                 * עדכון גודל ה-View.
-                 */
-                updateViewSize();
-
-
-                /*
-                 * חשוב:
-                 *
-                 * updateViewSize() גורם ל-layout.
-                 * לכן אנחנו מחכים לסיום ה-layout
-                 * ורק אז מתקנים את הגלילה.
-                 */
-                post(() -> {
-
-                    if (horizontalScroll == null ||
-                            verticalScroll == null) {
-
-                        return;
-                    }
-
-
-                    /*
-                     * איפה נקודת ה-focus צריכה להיות
-                     * אחרי הזום?
-                     *
-                     * contentFocusX/Y נשארים קבועים.
-                     */
-                    float newScrollX =
-                            contentFocusX *
-                                    scaleFactor -
-                                    focusX;
-
-
-                    float newScrollY =
-                            contentFocusY *
-                                    scaleFactor -
-                                    focusY;
-
-
-                    /*
-                     * גבולות הגלילה האופקית.
-                     */
-                    int maxScrollX =
-                            Math.max(
-                                    0,
-                                    calendarContainer.getWidth()
-                                            -
-                                            horizontalScroll.getWidth()
-                            );
-
-
-                    /*
-                     * גבולות הגלילה האנכית.
-                     */
-                    int maxScrollY =
-                            Math.max(
-                                    0,
-                                    calendarContainer.getHeight()
-                                            -
-                                            verticalScroll.getHeight()
-                            );
-
-
-                    int targetScrollX =
-                            Math.round(
-                                    newScrollX
-                            );
-
-
-                    int targetScrollY =
-                            Math.round(
-                                    newScrollY
-                            );
-
-
-                    /*
-                     * לא לצאת מגבולות הטבלה.
-                     */
-                    targetScrollX =
-                            Math.max(
-                                    0,
-                                    Math.min(
-                                            maxScrollX,
-                                            targetScrollX
-                                    )
-                            );
-
-
-                    targetScrollY =
-                            Math.max(
-                                    0,
-                                    Math.min(
-                                            maxScrollY,
-                                            targetScrollY
-                                    )
-                            );
-
-
-                    /*
-                     * הזזה למיקום החדש.
-                     *
-                     * זו השורה שהופכת את הזום
-                     * ל"טבעי".
-                     */
-                    horizontalScroll.scrollTo(
-                            targetScrollX,
-                            0
-                    );
-
-
-                    verticalScroll.scrollTo(
-                            0,
-                            targetScrollY
-                    );
-                });
+                zoomAround(
+                        newScale,
+                        detector.getFocusX(),
+                        detector.getFocusY()
+                );
 
 
                 return true;
@@ -2123,36 +2932,24 @@ public class HebrewCalendarFragment extends Fragment {
             public void onScaleEnd(
                     ScaleGestureDetector detector) {
 
-                super.onScaleEnd(detector);
-
-
-                /*
-                 * החזרת השליטה ל-ScrollViews.
-                 */
-                if (getParent() != null) {
-
-                    getParent()
-                            .requestDisallowInterceptTouchEvent(
-                                    false
-                            );
-                }
+                getParent()
+                        .requestDisallowInterceptTouchEvent(
+                                false
+                        );
             }
         }
 
 
         /*
-         * ============================================================
+         * ========================================================
          * Touch
-         * ============================================================
+         * ========================================================
          */
+
         @Override
         public boolean onTouchEvent(
                 MotionEvent event) {
 
-            /*
-             * קודם כל מעבירים את האירוע
-             * ל-ScaleGestureDetector.
-             */
             scaleDetector.onTouchEvent(event);
 
 
@@ -2165,26 +2962,27 @@ public class HebrewCalendarFragment extends Fragment {
                     downX =
                             event.getX();
 
+
                     downY =
                             event.getY();
+
+
+                    lastTouchX =
+                            event.getX();
+
+
+                    lastTouchY =
+                            event.getY();
+
 
                     moved =
                             false;
 
 
-                    /*
-                     * עדיין לא יודעים אם זה:
-                     *
-                     * לחיצה
-                     * או גלילה.
-                     */
-                    if (getParent() != null) {
-
-                        getParent()
-                                .requestDisallowInterceptTouchEvent(
-                                        false
-                                );
-                    }
+                    getParent()
+                            .requestDisallowInterceptTouchEvent(
+                                    true
+                            );
 
 
                     return true;
@@ -2192,22 +2990,14 @@ public class HebrewCalendarFragment extends Fragment {
 
                 case MotionEvent.ACTION_POINTER_DOWN:
 
-                    /*
-                     * נכנסה אצבע שנייה.
-                     *
-                     * מעכשיו מדובר ב-pinch.
-                     */
                     moved =
                             true;
 
 
-                    if (getParent() != null) {
-
-                        getParent()
-                                .requestDisallowInterceptTouchEvent(
-                                        true
-                                );
-                    }
+                    getParent()
+                            .requestDisallowInterceptTouchEvent(
+                                    true
+                            );
 
 
                     return true;
@@ -2215,34 +3005,26 @@ public class HebrewCalendarFragment extends Fragment {
 
                 case MotionEvent.ACTION_MOVE:
 
-                    /*
-                     * בזמן pinch:
-                     *
-                     * ScaleGestureDetector מטפל בזום.
-                     */
                     if (scaleDetector.isInProgress()) {
 
                         moved =
                                 true;
 
 
-                        if (getParent() != null) {
-
-                            getParent()
-                                    .requestDisallowInterceptTouchEvent(
-                                            true
-                                    );
-                        }
-
-
                         return true;
                     }
 
 
-                    /*
-                     * אם זו אצבע אחת שנעה,
-                     * לא מדובר בלחיצה.
-                     */
+                    float dx =
+                            event.getX() -
+                                    lastTouchX;
+
+
+                    float dy =
+                            event.getY() -
+                                    lastTouchY;
+
+
                     if (
                             Math.abs(
                                     event.getX() -
@@ -2257,18 +3039,53 @@ public class HebrewCalendarFragment extends Fragment {
 
                         moved =
                                 true;
+                    }
 
 
-                        /*
-                         * במקרה של אצבע אחת,
-                         * נותנים ל-ScrollView
-                         * לטפל בגלילה.
-                         */
-                        if (getParent() != null) {
+                    panX += dx;
 
-                            getParent()
-                                    .requestDisallowInterceptTouchEvent(
-                                            false
+                    panY += dy;
+
+
+                    clampPan();
+
+
+                    lastTouchX =
+                            event.getX();
+
+
+                    lastTouchY =
+                            event.getY();
+
+
+                    invalidate();
+
+
+                    return true;
+
+
+                case MotionEvent.ACTION_POINTER_UP:
+
+                    if (event.getPointerCount() > 1) {
+
+                        int remainingIndex =
+                                event.getActionIndex() == 0
+                                        ? 1
+                                        : 0;
+
+
+                        if (remainingIndex <
+                                event.getPointerCount()) {
+
+                            lastTouchX =
+                                    event.getX(
+                                            remainingIndex
+                                    );
+
+
+                            lastTouchY =
+                                    event.getY(
+                                            remainingIndex
                                     );
                         }
                     }
@@ -2277,23 +3094,14 @@ public class HebrewCalendarFragment extends Fragment {
                     return true;
 
 
-                case MotionEvent.ACTION_POINTER_UP:
-
-                    /*
-                     * אם אצבע אחת יורדת,
-                     * ScaleGestureDetector ימשיך לטפל
-                     * במידת הצורך.
-                     */
-                    return true;
-
-
                 case MotionEvent.ACTION_UP:
 
-                    /*
-                     * רק אם לא הייתה תנועה
-                     * ולא היה pinch,
-                     * זו לחיצה על יום.
-                     */
+                    getParent()
+                            .requestDisallowInterceptTouchEvent(
+                                    false
+                            );
+
+
                     if (!moved &&
                             !scaleDetector.isInProgress()) {
 
@@ -2304,29 +3112,18 @@ public class HebrewCalendarFragment extends Fragment {
                     }
 
 
-                    if (getParent() != null) {
-
-                        getParent()
-                                .requestDisallowInterceptTouchEvent(
-                                        false
-                                );
-                    }
-
-
                     performClick();
+
 
                     return true;
 
 
                 case MotionEvent.ACTION_CANCEL:
 
-                    if (getParent() != null) {
-
-                        getParent()
-                                .requestDisallowInterceptTouchEvent(
-                                        false
-                                );
-                    }
+                    getParent()
+                            .requestDisallowInterceptTouchEvent(
+                                    false
+                            );
 
 
                     return true;
@@ -2337,22 +3134,38 @@ public class HebrewCalendarFragment extends Fragment {
         }
 
 
+        /*
+         * ========================================================
+         * לחיצה על יום
+         * ========================================================
+         */
+
         private void handleClick(
-                float x,
-                float y) {
+                float screenX,
+                float screenY) {
 
             float realX =
-                    x / scaleFactor;
+                    (
+                            screenX -
+                                    panX
+                    ) /
+                            scaleFactor;
 
 
             float realY =
-                    y / scaleFactor;
+                    (
+                            screenY -
+                                    panY
+                    ) /
+                            scaleFactor;
 
 
             int monthIndex =
                     (int)
-                            (realY /
-                                    MONTH_HEIGHT);
+                            (
+                                    realY /
+                                            MONTH_HEIGHT
+                            );
 
 
             if (monthIndex < 0 ||
@@ -2362,16 +3175,21 @@ public class HebrewCalendarFragment extends Fragment {
             }
 
 
-            if (realX >= DAYS * DAY_WIDTH) {
+            if (realX >=
+                    DAYS * DAY_WIDTH) {
+
                 return;
             }
 
 
             int position =
-                    DAYS - 1 -
+                    DAYS -
+                            1 -
                             (int)
-                                    (realX /
-                                            DAY_WIDTH);
+                                    (
+                                            realX /
+                                                    DAY_WIDTH
+                                    );
 
 
             if (position < 0 ||
@@ -2496,7 +3314,9 @@ public class HebrewCalendarFragment extends Fragment {
 
 
             String hebrewDate =
-                    hebrewNumber(hebrewDay)
+                    hebrewNumber(
+                            hebrewDay
+                    )
                             + " ב"
                             + hebrewMonth
                             + " "

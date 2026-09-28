@@ -1,39 +1,125 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF">
+    android:orientation="vertical"
+    android:background="#F5F7FA"
+    android:paddingStart="10dp"
+    android:paddingEnd="10dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
 
-    <Spinner
-        android:id="@+id/yearSpinner"
-        android:layout_width="120dp"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="8dp" />
+    <!-- ========================================================= -->
+    <!-- כותרת עליונה - קומפקטית כדי לתת כמה שיותר מקום ללוח -->
+    <!-- ========================================================= -->
 
-    <HorizontalScrollView
-        android:id="@+id/horizontalScroll"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="60dp"
-        android:scrollbars="horizontal"
-        android:overScrollMode="never">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="6dp">
 
-        <ScrollView
-            android:id="@+id/verticalScroll"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:scrollbars="vertical"
-            android:overScrollMode="never">
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-            <FrameLayout
-                android:id="@+id/calendarContainer"
+            <TextView
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:text="לוח שנה"
+                android:textColor="#172033"
+                android:textSize="22sp"
+                android:textStyle="bold"/>
 
-        </ScrollView>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="לוח שנה עברי • גרגוריאני"
+                android:textColor="#7A8495"
+                android:textSize="11sp"
+                android:layout_marginTop="1dp"/>
 
-    </HorizontalScrollView>
+        </LinearLayout>
 
-</FrameLayout>
+
+        <!-- כפתור התנתקות -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/logoutButton"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:text="התנתקות"
+            android:textColor="#D32F2F"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:backgroundTint="#FFFFFF"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:cornerRadius="10dp"
+            app:strokeColor="#E5E7EB"
+            app:strokeWidth="1dp"/>
+
+    </LinearLayout>
+
+
+    <!-- ========================================================= -->
+    <!-- בחירת שנה - קומפקטית -->
+    <!-- ========================================================= -->
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#FFFFFF"
+        android:paddingStart="12dp"
+        android:paddingEnd="6dp"
+        android:layout_marginBottom="6dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="שנה"
+            android:textColor="#344054"
+            android:textSize="14sp"
+            android:textStyle="bold"/>
+
+        <Spinner
+            android:id="@+id/yearSpinner"
+            android:layout_width="120dp"
+            android:layout_height="42dp"
+            android:spinnerMode="dropdown"/>
+
+    </LinearLayout>
+
+
+    <!-- ========================================================= -->
+    <!-- אזור הלוח - מקבל את כל המקום שנשאר -->
+    <!-- ========================================================= -->
+
+    <FrameLayout
+        android:id="@+id/calendarViewport"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#FFFFFF"
+        android:elevation="3dp">
+
+        <FrameLayout
+            android:id="@+id/calendarContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+    </FrameLayout>
+
+</LinearLayout>

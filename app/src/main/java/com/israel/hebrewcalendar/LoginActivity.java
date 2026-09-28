@@ -1,3 +1,4 @@
+
 package com.israel.hebrewcalendar;
 
 import android.content.Intent;
@@ -6,13 +7,27 @@ import android.text.TextUtils;
 import android.widget.Button;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.credentials.Credential;
+import androidx.credentials.CredentialManager;
+import androidx.credentials.CustomCredential;
+import androidx.credentials.GetCredentialRequest;
 
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException;
+import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.GoogleAuthProvider;
+
+import android.os.CancellationSignal;
 
 public class LoginActivity extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
+
+    private CredentialManager credentialManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,136 +37,451 @@ public class LoginActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
 
-        Button loginButton = findViewById(R.id.loginButton);
-        Button registerButton = findViewById(R.id.registerButton);
-        Button googleButton = findViewById(R.id.googleButton);
+        credentialManager =
+                CredentialManager.create(this);
+
+        Button loginButton =
+                findViewById(R.id.loginButton);
+
+        Button registerButton =
+                findViewById(R.id.registerButton);
+
+        Button googleButton =
+                findViewById(R.id.googleButton);
 
 
-        loginButton.setOnClickListener(v -> loginWithEmail());
+        loginButton.setOnClickListener(
+                v -> loginWithEmail()
+        );
 
-        registerButton.setOnClickListener(v -> registerWithEmail());
 
-        googleButton.setOnClickListener(v -> loginWithGoogle());
+        registerButton.setOnClickListener(
+                v -> registerWithEmail()
+        );
+
+
+        googleButton.setOnClickListener(
+                v -> loginWithGoogle()
+        );
     }
 
+
+    /*
+     * ============================================================
+     * התחברות עם Email + Password
+     * ============================================================
+     */
     private void loginWithEmail() {
 
-        String email = getEmail();
-        String password = getPassword();
+        String email =
+                getEmail();
+
+        String password =
+                getPassword();
+
 
         if (email.isEmpty()) {
-            showMessage("נא להזין כתובת אימייל");
+
+            showMessage(
+                    "נא להזין כתובת אימייל"
+            );
+
             return;
         }
+
 
         if (password.isEmpty()) {
-            showMessage("נא להזין סיסמה");
+
+            showMessage(
+                    "נא להזין סיסמה"
+            );
+
             return;
         }
 
-        mAuth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, task -> {
 
-                    if (task.isSuccessful()) {
+        mAuth.signInWithEmailAndPassword(
+                        email,
+                        password
+                )
+                .addOnCompleteListener(
+                        this,
+                        task -> {
 
-                        showMessage("התחברת בהצלחה");
+                            if (task.isSuccessful()) {
 
-                        openCalendar();
+                                showMessage(
+                                        "התחברת בהצלחה"
+                                );
 
-                    } else {
+                                openCalendar();
 
-                        showMessage(
-                                "ההתחברות נכשלה: " +
-                                        getFirebaseError(task.getException())
-                        );
-                    }
-                });
+                            } else {
+
+                                showMessage(
+                                        "ההתחברות נכשלה: "
+                                                + getFirebaseError(
+                                                task.getException()
+                                        )
+                                );
+                            }
+                        }
+                );
     }
 
+
+    /*
+     * ============================================================
+     * יצירת חשבון עם Email + Password
+     * ============================================================
+     */
     private void registerWithEmail() {
 
-        String email = getEmail();
-        String password = getPassword();
+        String email =
+                getEmail();
+
+        String password =
+                getPassword();
+
 
         if (email.isEmpty()) {
-            showMessage("נא להזין כתובת אימייל");
+
+            showMessage(
+                    "נא להזין כתובת אימייל"
+            );
+
             return;
         }
+
 
         if (password.isEmpty()) {
-            showMessage("נא להזין סיסמה");
+
+            showMessage(
+                    "נא להזין סיסמה"
+            );
+
             return;
         }
+
 
         if (password.length() < 6) {
-            showMessage("הסיסמה חייבת להכיל לפחות 6 תווים");
+
+            showMessage(
+                    "הסיסמה חייבת להכיל לפחות 6 תווים"
+            );
+
             return;
         }
 
-        mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, task -> {
 
-                    if (task.isSuccessful()) {
+        mAuth.createUserWithEmailAndPassword(
+                        email,
+                        password
+                )
+                .addOnCompleteListener(
+                        this,
+                        task -> {
 
-                        showMessage("החשבון נוצר בהצלחה");
+                            if (task.isSuccessful()) {
 
-                        openCalendar();
+                                showMessage(
+                                        "החשבון נוצר בהצלחה"
+                                );
 
-                    } else {
+                                openCalendar();
 
-                        showMessage(
-                                "יצירת החשבון נכשלה: " +
-                                        getFirebaseError(task.getException())
-                        );
-                    }
-                });
+                            } else {
+
+                                showMessage(
+                                        "יצירת החשבון נכשלה: "
+                                                + getFirebaseError(
+                                                task.getException()
+                                        )
+                                );
+                            }
+                        }
+                );
     }
 
+
+    /*
+     * ============================================================
+     * Google Sign-In
+     * ============================================================
+     */
     private void loginWithGoogle() {
 
         /*
-         * את Google Sign-In נחבר בשלב הבא.
+         * חשוב:
+         *
+         * default_web_client_id הוא ה-Web OAuth Client ID
+         * שנוצר עבור פרויקט Firebase/Google שלך.
          */
-        showMessage("Google Sign-In יחובר בשלב הבא");
+        GetGoogleIdOption googleIdOption =
+                new GetGoogleIdOption.Builder()
+
+                        /*
+                         * מציג גם חשבונות Google
+                         * שלא השתמשו באפליקציה בעבר.
+                         */
+                        .setFilterByAuthorizedAccounts(false)
+
+                        /*
+                         * זה צריך להיות ה-Web Client ID,
+                         * לא Android Client ID.
+                         */
+                        .setServerClientId(
+                                getString(
+                                        R.string.default_web_client_id
+                                )
+                        )
+
+                        .build();
+
+
+        GetCredentialRequest request =
+                new GetCredentialRequest.Builder()
+
+                        .addCredentialOption(
+                                googleIdOption
+                        )
+
+                        .build();
+
+
+        credentialManager
+                .getCredentialAsync(
+                        this,
+                        request,
+                        new android.os.CancellationSignal(),
+                        getMainExecutor(),
+                        new androidx.credentials.CredentialManagerCallback<
+                                androidx.credentials.GetCredentialResponse,
+                                androidx.credentials.exceptions.GetCredentialException>() {
+
+                            @Override
+                            public void onResult(
+                                    androidx.credentials.GetCredentialResponse result) {
+
+                                handleGoogleCredential(
+                                        result.getCredential()
+                                );
+                            }
+
+
+                            @Override
+                            public void onError(
+                                    @NonNull androidx.credentials.exceptions.GetCredentialException e) {
+
+                                showMessage(
+                                        "התחברות עם Google נכשלה: "
+                                                + e.getMessage()
+                                );
+                            }
+                        }
+                );
     }
 
+
+    /*
+     * ============================================================
+     * קבלת Credential מ-Google
+     * ============================================================
+     */
+    private void handleGoogleCredential(
+            Credential credential) {
+
+        if (!(credential instanceof CustomCredential)) {
+
+            showMessage(
+                    "פרטי Google לא תקינים"
+            );
+
+            return;
+        }
+
+
+        CustomCredential customCredential =
+                (CustomCredential) credential;
+
+
+        if (!GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                .equals(customCredential.getType())) {
+
+            showMessage(
+                    "פרטי Google לא תקינים"
+            );
+
+            return;
+        }
+
+
+        try {
+
+            GoogleIdTokenCredential googleIdTokenCredential =
+                    GoogleIdTokenCredential
+                            .createFrom(credential.getData());
+
+            String idToken =
+                    googleIdTokenCredential.getIdToken();
+
+            AuthCredential firebaseCredential =
+                    GoogleAuthProvider.getCredential(
+                            idToken,
+                            null
+                    );
+
+            mAuth.signInWithCredential(firebaseCredential)
+                    .addOnCompleteListener(this, task -> {
+
+                        if (task.isSuccessful()) {
+
+                            showMessage(
+                                    "התחברת בהצלחה"
+                            );
+
+                            openCalendar();
+
+                        } else {
+
+                            showMessage(
+                                    "ההתחברות נכשלה: "
+                                            + getFirebaseError(
+                                            task.getException()
+                                    )
+                            );
+                        }
+                    });
+
+        } catch (Exception e) {
+
+            showMessage(
+                    "התחברות עם Google נכשלה: "
+                            + e.getMessage()
+            );
+        }
+    }
+
+
+    /*
+     * ============================================================
+     * חיבור Google ל-Firebase
+     * ============================================================
+     */
+    private void firebaseAuthWithGoogle(
+            String idToken) {
+
+        AuthCredential credential =
+                GoogleAuthProvider.getCredential(
+                        idToken,
+                        null
+                );
+
+
+        mAuth.signInWithCredential(
+                        credential
+                )
+                .addOnCompleteListener(
+                        this,
+                        task -> {
+
+                            if (task.isSuccessful()) {
+
+                                showMessage(
+                                        "התחברת בהצלחה עם Google"
+                                );
+
+                                openCalendar();
+
+                            } else {
+
+                                showMessage(
+                                        "ההתחברות עם Google נכשלה: "
+                                                + getFirebaseError(
+                                                task.getException()
+                                        )
+                                );
+                            }
+                        }
+                );
+    }
+
+
+    /*
+     * ============================================================
+     * Email
+     * ============================================================
+     */
     private String getEmail() {
 
         android.widget.EditText emailEditText =
-                findViewById(R.id.emailEditText);
+                findViewById(
+                        R.id.emailEditText
+                );
 
-        String email = emailEditText.getText().toString().trim();
 
-        return email;
+        return emailEditText
+                .getText()
+                .toString()
+                .trim();
     }
 
+
+    /*
+     * ============================================================
+     * Password
+     * ============================================================
+     */
     private String getPassword() {
 
         android.widget.EditText passwordEditText =
-                findViewById(R.id.passwordEditText);
+                findViewById(
+                        R.id.passwordEditText
+                );
 
-        String password =
-                passwordEditText.getText().toString();
 
-        return password;
+        return passwordEditText
+                .getText()
+                .toString();
     }
 
-    private String getFirebaseError(Exception exception) {
+
+    /*
+     * ============================================================
+     * Firebase error
+     * ============================================================
+     */
+    private String getFirebaseError(
+            Exception exception) {
 
         if (exception == null) {
+
             return "שגיאה לא ידועה";
         }
 
-        String message = exception.getMessage();
 
-        if (message == null || message.isEmpty()) {
+        String message =
+                exception.getMessage();
+
+
+        if (message == null ||
+                message.isEmpty()) {
+
             return "שגיאה לא ידועה";
         }
+
 
         return message;
     }
 
-    private void showMessage(String message) {
+
+    /*
+     * ============================================================
+     * הודעה
+     * ============================================================
+     */
+    private void showMessage(
+            String message) {
 
         Toast.makeText(
                 this,
@@ -160,10 +490,20 @@ public class LoginActivity extends AppCompatActivity {
         ).show();
     }
 
+
+    /*
+     * ============================================================
+     * מעבר ללוח השנה
+     * ============================================================
+     */
     private void openCalendar() {
 
         Intent intent =
-                new Intent(LoginActivity.this, MainActivity.class);
+                new Intent(
+                        LoginActivity.this,
+                        MainActivity.class
+                );
+
 
         startActivity(intent);
 
