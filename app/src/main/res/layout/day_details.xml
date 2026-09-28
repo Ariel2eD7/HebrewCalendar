@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F5F5F5"
@@ -10,115 +11,216 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp"
+        android:padding="16dp"
         android:layoutDirection="rtl">
 
-        <!-- כותרת המסך -->
+        <!-- כותרת -->
         <TextView
-            android:id="@+id/titleText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
             android:text="פרטי היום"
-            android:textColor="#222222"
-            android:textSize="26sp"
+            android:textSize="28sp"
             android:textStyle="bold"
-            android:layout_marginBottom="20dp" />
+            android:textColor="#222222"
+            android:gravity="center"
+            android:layout_marginBottom="12dp" />
 
         <!-- תאריך לועזי -->
         <TextView
             android:id="@+id/gregorianDateText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
             android:text="28/09/2026"
-            android:textColor="#333333"
             android:textSize="20sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:gravity="center" />
 
         <!-- תאריך עברי -->
         <TextView
             android:id="@+id/hebrewDateText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
             android:text="ו' בתשרי תשפ״ז"
-            android:textColor="#666666"
             android:textSize="18sp"
-            android:layout_marginTop="6dp"
-            android:layout_marginBottom="28dp" />
-
-        <!-- כותרת הנתון -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="כותרת"
-            android:textColor="#222222"
-            android:textSize="17sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <EditText
-            android:id="@+id/titleEditText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#FFFFFF"
-            android:hint="לדוגמה: פגישה, תשלום, יום הולדת..."
-            android:inputType="text"
-            android:padding="14dp"
-            android:textColor="#222222"
-            android:textColorHint="#999999"
-            android:textSize="16sp"
+            android:textColor="#666666"
+            android:gravity="center"
+            android:layout_marginTop="5dp"
             android:layout_marginBottom="22dp" />
 
-        <!-- פרטים -->
+        <!-- כותרת האירועים -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="פרטים"
-            android:textColor="#222222"
-            android:textSize="17sp"
+            android:text="אירועים ביום הזה"
+            android:textSize="21sp"
             android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <EditText
-            android:id="@+id/descriptionEditText"
-            android:layout_width="match_parent"
-            android:layout_height="150dp"
-            android:gravity="top|right"
-            android:background="#FFFFFF"
-            android:hint="הוסף פרטים..."
-            android:inputType="textMultiLine"
-            android:padding="14dp"
             android:textColor="#222222"
-            android:textColorHint="#999999"
-            android:textSize="16sp"
-            android:layout_marginBottom="30dp" />
+            android:layout_marginBottom="10dp" />
 
-        <!-- כפתורים -->
+        <!-- כאן נטענים האירועים מ-Firestore -->
         <LinearLayout
+            android:id="@+id/eventsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center">
+            android:orientation="vertical" />
 
-            <Button
-                android:id="@+id/cancelButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="ביטול"
-                android:textSize="16sp"
-                android:layout_marginEnd="8dp" />
+        <!-- הוספת אירוע -->
+        <Button
+            android:id="@+id/addEventButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="+ הוסף אירוע"
+            android:textSize="17sp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="18dp" />
 
-            <Button
-                android:id="@+id/saveButton"
-                android:layout_width="0dp"
+        <!-- עורך אירוע -->
+        <LinearLayout
+            android:id="@+id/editorContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:padding="16dp"
+            android:layout_marginTop="5dp">
+
+            <!-- כותרת העורך -->
+            <TextView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="שמור"
+                android:text="פרטי האירוע"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="#222222"
+                android:layout_marginBottom="18dp" />
+
+            <!-- סוג -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="סוג"
                 android:textSize="16sp"
-                android:layout_marginStart="8dp" />
+                android:textStyle="bold"
+                android:textColor="#222222"
+                android:layout_marginBottom="6dp" />
+
+            <Spinner
+                android:id="@+id/typeSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="18dp" />
+
+            <!-- כותרת -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="כותרת"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#222222"
+                android:layout_marginBottom="6dp" />
+
+            <EditText
+                android:id="@+id/titleEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="לדוגמה: פגישה, יום הולדת..."
+                android:inputType="text"
+                android:textSize="16sp"
+                android:padding="14dp"
+                android:background="#F5F5F5"
+                android:layout_marginBottom="16dp" />
+
+            <!-- שעה -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="שעה"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#222222"
+                android:layout_marginBottom="6dp" />
+
+            <EditText
+                android:id="@+id/timeEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="לדוגמה: 14:30"
+                android:inputType="time"
+                android:textSize="16sp"
+                android:padding="14dp"
+                android:background="#F5F5F5"
+                android:layout_marginBottom="16dp" />
+
+            <!-- סכום -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="סכום"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#222222"
+                android:layout_marginBottom="6dp" />
+
+            <EditText
+                android:id="@+id/amountEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="לדוגמה: 250"
+                android:inputType="numberDecimal"
+                android:textSize="16sp"
+                android:padding="14dp"
+                android:background="#F5F5F5"
+                android:layout_marginBottom="16dp" />
+
+            <!-- פרטים -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="פרטים"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#222222"
+                android:layout_marginBottom="6dp" />
+
+            <EditText
+                android:id="@+id/descriptionEditText"
+                android:layout_width="match_parent"
+                android:layout_height="130dp"
+                android:hint="פרטים נוספים..."
+                android:gravity="top|right"
+                android:inputType="textMultiLine"
+                android:textSize="16sp"
+                android:padding="14dp"
+                android:background="#F5F5F5"
+                android:layout_marginBottom="20dp" />
+
+            <!-- כפתורים -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/cancelButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="ביטול"
+                    android:textSize="16sp"
+                    android:layout_marginEnd="6dp" />
+
+                <Button
+                    android:id="@+id/saveButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="שמור"
+                    android:textSize="16sp"
+                    android:layout_marginStart="6dp" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
