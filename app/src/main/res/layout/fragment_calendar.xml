@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<FrameLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFF">
 
-    <!-- בחירת שנה -->
     <Spinner
         android:id="@+id/yearSpinner"
         android:layout_width="120dp"
@@ -14,13 +12,11 @@
         android:layout_gravity="top|center_horizontal"
         android:layout_marginTop="8dp" />
 
-    <!-- הלוח -->
     <HorizontalScrollView
         android:id="@+id/horizontalScroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginTop="60dp"
-        android:fillViewport="false"
         android:scrollbars="horizontal"
         android:overScrollMode="never">
 
@@ -28,21 +24,13 @@
             android:id="@+id/verticalScroll"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fillViewport="false"
             android:scrollbars="vertical"
             android:overScrollMode="never">
 
             <FrameLayout
                 android:id="@+id/calendarContainer"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content">
-
-                <View
-                    android:id="@+id/calendarView"
-                    android:layout_width="1dp"
-                    android:layout_height="1dp"/>
-
-            </FrameLayout>
+                android:layout_height="wrap_content" />
 
         </ScrollView>
 
