@@ -1831,9 +1831,122 @@ public class HebrewCalendarFragment extends Fragment {
         }
 
 
+        /*
+         * ============================================================
+         * זום טבעי כמו Google Sheets
+         * ============================================================
+         *
+         * הרעיון:
+         *
+         * אם האצבעות נמצאות למשל על תא מסוים,
+         * התא הזה חייב להישאר מתחת לאצבעות
+         * גם אחרי שהזום משתנה.
+         *
+         * לכן אנחנו שומרים את נקודת ה-focus
+         * ומתקנים את מיקום שני ה-ScrollViews
+         * אחרי שינוי הזום.
+         */
         private class ScaleListener
-                extends ScaleGestureDetector
-                .SimpleOnScaleGestureListener {
+                extends ScaleGestureDetector.SimpleOnScaleGestureListener {
+
+            /*
+             * נקודת ה-pinch במסך/ב-View
+             */
+            private float focusX;
+            private float focusY;
+
+            /*
+             * מיקום הגלילה לפני שינוי הזום
+             */
+            private int oldScrollX;
+            private int oldScrollY;
+
+            /*
+             * הזום שהיה לפני השינוי
+             */
+            private float oldScale;
+
+            /*
+             * נקודת התוכן שעליה המשתמש עושה pinch.
+             *
+             * היא נשמרת בקואורדינטות של הטבלה
+             * לפני שינוי הזום.
+             */
+            private float contentFocusX;
+            private float contentFocusY;
+
+
+            @Override
+            public boolean onScaleBegin(
+                    ScaleGestureDetector detector) {
+
+                oldScale =
+                        scaleFactor;
+
+
+                /*
+                 * נקודת המרכז של שתי האצבעות
+                 */
+                focusX =
+                        detector.getFocusX();
+
+                focusY =
+                        detector.getFocusY();
+
+
+                /*
+                 * מיקום הגלילה הנוכחי
+                 */
+                oldScrollX =
+                        horizontalScroll != null
+                                ? horizontalScroll.getScrollX()
+                                : 0;
+
+
+                oldScrollY =
+                        verticalScroll != null
+                                ? verticalScroll.getScrollY()
+                                : 0;
+
+
+                /*
+                 * המרה מנקודת מסך
+                 * לנקודה אמיתית בתוך הטבלה.
+                 *
+                 * לדוגמה:
+                 *
+                 * scrollX = 500
+                 * focusX = 200
+                 *
+                 * כלומר המשתמש נוגע בנקודה 700
+                 * בתוך התוכן.
+                 */
+                contentFocusX =
+                        (oldScrollX + focusX)
+                                / oldScale;
+
+
+                contentFocusY =
+                        (oldScrollY + focusY)
+                                / oldScale;
+
+
+                /*
+                 * בזמן pinch ה-ScrollViews
+                 * לא צריכים לגנוב את המגע.
+                 */
+                if (getParent() != null) {
+
+                    getParent()
+                            .requestDisallowInterceptTouchEvent(
+                                    true
+                            );
+                }
+
+
+                return true;
+            }
+
 
             @Override
             public boolean onScale(
@@ -1847,24 +1960,159 @@ public class HebrewCalendarFragment extends Fragment {
                         getMinimumScale();
 
 
-                scaleFactor =
+                /*
+                 * שינוי זום חלק.
+                 */
+                float newScale =
+                        scaleFactor *
+                                detector.getScaleFactor();
+
+
+                /*
+                 * הגבלת הזום.
+                 */
+                newScale =
                         Math.max(
                                 min,
                                 Math.min(
                                         MAX_SCALE,
-                                        scaleFactor *
-                                                detector
-                                                        .getScaleFactor()
+                                        newScale
                                 )
                         );
 
 
+                /*
+                 * אם לא באמת השתנה הזום
+                 * אין צורך לעשות כלום.
+                 */
                 if (Math.abs(
-                        scaleFactor - old
-                ) > .001f) {
+                        newScale - old
+                ) < 0.0001f) {
 
-                    updateViewSize();
+                    return true;
                 }
+
+
+                scaleFactor =
+                        newScale;
+
+
+                /*
+                 * עדכון גודל ה-View.
+                 */
+                updateViewSize();
+
+
+                /*
+                 * חשוב:
+                 *
+                 * updateViewSize() גורם ל-layout.
+                 * לכן אנחנו מחכים לסיום ה-layout
+                 * ורק אז מתקנים את הגלילה.
+                 */
+                post(() -> {
+
+                    if (horizontalScroll == null ||
+                            verticalScroll == null) {
+
+                        return;
+                    }
+
+
+                    /*
+                     * איפה נקודת ה-focus צריכה להיות
+                     * אחרי הזום?
+                     *
+                     * contentFocusX/Y נשארים קבועים.
+                     */
+                    float newScrollX =
+                            contentFocusX *
+                                    scaleFactor -
+                                    focusX;
+
+
+                    float newScrollY =
+                            contentFocusY *
+                                    scaleFactor -
+                                    focusY;
+
+
+                    /*
+                     * גבולות הגלילה האופקית.
+                     */
+                    int maxScrollX =
+                            Math.max(
+                                    0,
+                                    calendarContainer.getWidth()
+                                            -
+                                            horizontalScroll.getWidth()
+                            );
+
+
+                    /*
+                     * גבולות הגלילה האנכית.
+                     */
+                    int maxScrollY =
+                            Math.max(
+                                    0,
+                                    calendarContainer.getHeight()
+                                            -
+                                            verticalScroll.getHeight()
+                            );
+
+
+                    int targetScrollX =
+                            Math.round(
+                                    newScrollX
+                            );
+
+
+                    int targetScrollY =
+                            Math.round(
+                                    newScrollY
+                            );
+
+
+                    /*
+                     * לא לצאת מגבולות הטבלה.
+                     */
+                    targetScrollX =
+                            Math.max(
+                                    0,
+                                    Math.min(
+                                            maxScrollX,
+                                            targetScrollX
+                                    )
+                            );
+
+
+                    targetScrollY =
+                            Math.max(
+                                    0,
+                                    Math.min(
+                                            maxScrollY,
+                                            targetScrollY
+                                    )
+                            );
+
+
+                    /*
+                     * הזזה למיקום החדש.
+                     *
+                     * זו השורה שהופכת את הזום
+                     * ל"טבעי".
+                     */
+                    horizontalScroll.scrollTo(
+                            targetScrollX,
+                            0
+                    );
+
+
+                    verticalScroll.scrollTo(
+                            0,
+                            targetScrollY
+                    );
+                });
 
 
                 return true;
@@ -1872,18 +2120,39 @@ public class HebrewCalendarFragment extends Fragment {
 
 
             @Override
-            public boolean onScaleBegin(
+            public void onScaleEnd(
                     ScaleGestureDetector detector) {
 
-                return true;
+                super.onScaleEnd(detector);
+
+
+                /*
+                 * החזרת השליטה ל-ScrollViews.
+                 */
+                if (getParent() != null) {
+
+                    getParent()
+                            .requestDisallowInterceptTouchEvent(
+                                    false
+                            );
+                }
             }
         }
 
 
+        /*
+         * ============================================================
+         * Touch
+         * ============================================================
+         */
         @Override
         public boolean onTouchEvent(
                 MotionEvent event) {
 
+            /*
+             * קודם כל מעבירים את האירוע
+             * ל-ScaleGestureDetector.
+             */
             scaleDetector.onTouchEvent(event);
 
 
@@ -1902,39 +2171,78 @@ public class HebrewCalendarFragment extends Fragment {
                     moved =
                             false;
 
+
+                    /*
+                     * עדיין לא יודעים אם זה:
+                     *
+                     * לחיצה
+                     * או גלילה.
+                     */
+                    if (getParent() != null) {
+
+                        getParent()
+                                .requestDisallowInterceptTouchEvent(
+                                        false
+                                );
+                    }
+
+
                     return true;
 
 
                 case MotionEvent.ACTION_POINTER_DOWN:
 
+                    /*
+                     * נכנסה אצבע שנייה.
+                     *
+                     * מעכשיו מדובר ב-pinch.
+                     */
                     moved =
                             true;
 
-                    getParent()
-                            .requestDisallowInterceptTouchEvent(
-                                    true
-                            );
+
+                    if (getParent() != null) {
+
+                        getParent()
+                                .requestDisallowInterceptTouchEvent(
+                                        true
+                                );
+                    }
+
 
                     return true;
 
 
                 case MotionEvent.ACTION_MOVE:
 
-                    if (scaleDetector
-                            .isInProgress()) {
+                    /*
+                     * בזמן pinch:
+                     *
+                     * ScaleGestureDetector מטפל בזום.
+                     */
+                    if (scaleDetector.isInProgress()) {
 
                         moved =
                                 true;
 
-                        getParent()
-                                .requestDisallowInterceptTouchEvent(
-                                        true
-                                );
+
+                        if (getParent() != null) {
+
+                            getParent()
+                                    .requestDisallowInterceptTouchEvent(
+                                            true
+                                    );
+                        }
+
 
                         return true;
                     }
 
 
+                    /*
+                     * אם זו אצבע אחת שנעה,
+                     * לא מדובר בלחיצה.
+                     */
                     if (
                             Math.abs(
                                     event.getX() -
@@ -1950,10 +2258,19 @@ public class HebrewCalendarFragment extends Fragment {
                         moved =
                                 true;
 
-                        getParent()
-                                .requestDisallowInterceptTouchEvent(
-                                        false
-                                );
+
+                        /*
+                         * במקרה של אצבע אחת,
+                         * נותנים ל-ScrollView
+                         * לטפל בגלילה.
+                         */
+                        if (getParent() != null) {
+
+                            getParent()
+                                    .requestDisallowInterceptTouchEvent(
+                                            false
+                                    );
+                        }
                     }
 
 
@@ -1962,14 +2279,23 @@ public class HebrewCalendarFragment extends Fragment {
 
                 case MotionEvent.ACTION_POINTER_UP:
 
+                    /*
+                     * אם אצבע אחת יורדת,
+                     * ScaleGestureDetector ימשיך לטפל
+                     * במידת הצורך.
+                     */
                     return true;
 
 
                 case MotionEvent.ACTION_UP:
 
+                    /*
+                     * רק אם לא הייתה תנועה
+                     * ולא היה pinch,
+                     * זו לחיצה על יום.
+                     */
                     if (!moved &&
-                            !scaleDetector
-                                    .isInProgress()) {
+                            !scaleDetector.isInProgress()) {
 
                         handleClick(
                                 event.getX(),
@@ -1978,7 +2304,30 @@ public class HebrewCalendarFragment extends Fragment {
                     }
 
 
+                    if (getParent() != null) {
+
+                        getParent()
+                                .requestDisallowInterceptTouchEvent(
+                                        false
+                                );
+                    }
+
+
                     performClick();
+
+                    return true;
+
+
+                case MotionEvent.ACTION_CANCEL:
+
+                    if (getParent() != null) {
+
+                        getParent()
+                                .requestDisallowInterceptTouchEvent(
+                                        false
+                                );
+                    }
+
 
                     return true;
             }
