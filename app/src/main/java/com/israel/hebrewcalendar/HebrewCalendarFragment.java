@@ -282,11 +282,6 @@ public class HebrewCalendarFragment extends Fragment {
     }
 
 
-    /*
-     * ============================================================
-     * טעינת אירועים
-     * ============================================================
-     */
 
     private void loadCalendarEntries() {
 
@@ -315,18 +310,86 @@ public class HebrewCalendarFragment extends Fragment {
                     for (DocumentSnapshot document :
                             querySnapshot.getDocuments()) {
 
-                        String date =
+                        /*
+                         * ====================================================
+                         * אירוע חדש
+                         *
+                         * startDate / endDate
+                         *
+                         * לדוגמה:
+                         *
+                         * startDate = 2026-10-01
+                         * endDate   = 2026-10-14
+                         * ====================================================
+                         */
+
+                        String startDate =
                                 document.getString(
-                                        "gregorianDate"
+                                        "startDate"
                                 );
 
 
-                        if (date == null ||
-                                date.trim().isEmpty()) {
+                        String endDate =
+                                document.getString(
+                                        "endDate"
+                                );
+
+
+                        /*
+                         * ====================================================
+                         * תמיכה בנתונים הישנים
+                         *
+                         * אם קיים מסמך ישן שיש בו רק
+                         * gregorianDate, עדיין נציג אותו.
+                         * ====================================================
+                         */
+
+                        if ((startDate == null ||
+                                startDate.trim().isEmpty()) &&
+                                (endDate == null ||
+                                        endDate.trim().isEmpty())) {
+
+                            String oldDate =
+                                    document.getString(
+                                            "gregorianDate"
+                                    );
+
+
+                            if (oldDate == null ||
+                                    oldDate.trim().isEmpty()) {
+
+                                continue;
+                            }
+
+
+                            /*
+                             * ממירים dd/MM/yyyy
+                             * ל-yyyy-MM-dd.
+                             */
+
+                            startDate =
+                                    convertOldDateToNewFormat(
+                                            oldDate
+                                    );
+
+
+                            endDate =
+                                    startDate;
+                        }
+
+
+                        if (startDate == null ||
+                                endDate == null) {
 
                             continue;
                         }
 
+
+                        /*
+                         * ====================================================
+                         * יצירת האובייקט
+                         * ====================================================
+                         */
 
                         CalendarEntry entry =
                                 new CalendarEntry();
@@ -336,8 +399,12 @@ public class HebrewCalendarFragment extends Fragment {
                                 document.getId();
 
 
-                        entry.gregorianDate =
-                                date;
+                        entry.startDate =
+                                startDate;
+
+
+                        entry.endDate =
+                                endDate;
 
 
                         entry.hebrewDate =
@@ -358,9 +425,44 @@ public class HebrewCalendarFragment extends Fragment {
                                 );
 
 
-                        entry.time =
+                        entry.startTime =
                                 document.getString(
-                                        "time"
+                                        "startTime"
+                                );
+
+
+                        entry.endTime =
+                                document.getString(
+                                        "endTime"
+                                );
+
+
+                        Boolean allDay =
+                                document.getBoolean(
+                                        "allDay"
+                                );
+
+
+                        entry.allDay =
+                                allDay != null &&
+                                        allDay;
+
+
+                        entry.location =
+                                document.getString(
+                                        "location"
+                                );
+
+
+                        entry.link =
+                                document.getString(
+                                        "link"
+                                );
+
+
+                        entry.reminder =
+                                document.getString(
+                                        "reminder"
                                 );
 
 
@@ -370,26 +472,32 @@ public class HebrewCalendarFragment extends Fragment {
                                 );
 
 
-                        if (!calendarEntries.containsKey(date)) {
+                        /*
+                         * ====================================================
+                         * מוסיפים את האירוע לכל יום שנמצא בטווח.
+                         *
+                         * לדוגמה:
+                         *
+                         * 01/10 → 14/10
+                         *
+                         * האירוע ייכנס ל-14 מפתחות שונים.
+                         * ====================================================
+                         */
 
-                            calendarEntries.put(
-                                    date,
-                                    new ArrayList<>()
-                            );
-                        }
-
-
-                        calendarEntries
-                                .get(date)
-                                .add(entry);
+                        addEntryToDateRange(
+                                entry
+                        );
                     }
 
+
+                    /*
+                     * רענון הלוח.
+                     */
 
                     if (calendarView != null) {
 
                         calendarView.invalidate();
                     }
-
                 })
                 .addOnFailureListener(e -> {
 
@@ -405,7 +513,291 @@ public class HebrewCalendarFragment extends Fragment {
                             Toast.LENGTH_LONG
                     ).show();
                 });
+
     }
+
+    /*
+
+     * ================================================================
+     * הוספת אירוע לכל הימים בטווח
+     * ================================================================
+     */
+
+    private void addEntryToDateRange(
+            CalendarEntry entry) {
+
+        if (entry == null ||
+                entry.startDate == null ||
+                entry.endDate == null) {
+
+            return;
+        }
+
+
+        Calendar start =
+                parseDate(
+                        entry.startDate
+                );
+
+
+        Calendar end =
+                parseDate(
+                        entry.endDate
+                );
+
+
+        if (start == null ||
+                end == null) {
+
+            return;
+        }
+
+
+        /*
+         * מוודאים שאין שעות שמפריעות
+         * להשוואת התאריכים.
+         */
+
+        normalizeDate(
+                start
+        );
+
+
+        normalizeDate(
+                end
+        );
+
+
+        /*
+         * אם מסיבה כלשהי הסיום לפני ההתחלה,
+         * לא מציגים טווח הפוך.
+         */
+
+        if (end.before(start)) {
+            return;
+        }
+
+
+        /*
+         * עוברים יום-יום.
+         */
+
+        Calendar current =
+                (Calendar) start.clone();
+
+
+        while (!current.after(end)) {
+
+            String dateKey =
+                    formatDateKey(
+                            current
+                    );
+
+
+            if (!calendarEntries.containsKey(
+                    dateKey
+            )) {
+
+                calendarEntries.put(
+                        dateKey,
+                        new ArrayList<>()
+                );
+            }
+
+
+            calendarEntries
+                    .get(dateKey)
+                    .add(entry);
+
+
+            current.add(
+                    Calendar.DAY_OF_MONTH,
+                    1
+            );
+        }
+
+    }
+
+    /*
+
+     * ================================================================
+     * המרת תאריך ישן:
+     *
+     * dd/MM/yyyy
+     *
+     * ל:
+     *
+     * yyyy-MM-dd
+     * ================================================================
+     */
+
+    private String convertOldDateToNewFormat(
+            String oldDate) {
+
+        if (oldDate == null ||
+                oldDate.trim().isEmpty()) {
+
+            return null;
+        }
+
+
+        try {
+
+            java.text.SimpleDateFormat oldFormat =
+                    new java.text.SimpleDateFormat(
+                            "dd/MM/yyyy",
+                            Locale.US
+                    );
+
+
+            oldFormat.setLenient(false);
+
+
+            java.util.Date date =
+                    oldFormat.parse(
+                            oldDate
+                    );
+
+
+            if (date == null) {
+                return null;
+            }
+
+
+            java.text.SimpleDateFormat newFormat =
+                    new java.text.SimpleDateFormat(
+                            "yyyy-MM-dd",
+                            Locale.US
+                    );
+
+
+            return newFormat.format(
+                    date
+            );
+
+        } catch (Exception e) {
+
+            return null;
+        }
+
+
+    }
+
+    /*
+
+     * ================================================================
+     * יצירת Calendar מתוך yyyy-MM-dd
+     * ================================================================
+     */
+
+    private Calendar parseDate(
+            String value) {
+
+        if (value == null ||
+                value.trim().isEmpty()) {
+
+            return null;
+        }
+
+
+        try {
+
+            java.text.SimpleDateFormat format =
+                    new java.text.SimpleDateFormat(
+                            "yyyy-MM-dd",
+                            Locale.US
+                    );
+
+
+            format.setLenient(false);
+
+
+            java.util.Date date =
+                    format.parse(
+                            value
+                    );
+
+
+            if (date == null) {
+                return null;
+            }
+
+
+            Calendar calendar =
+                    Calendar.getInstance();
+
+
+            calendar.setTime(
+                    date
+            );
+
+
+            return calendar;
+
+        } catch (Exception e) {
+
+            return null;
+        }
+
+
+    }
+
+    /*
+
+     * ================================================================
+     * איפוס שעה
+     * ================================================================
+     */
+
+    private void normalizeDate(
+            Calendar calendar) {
+
+        calendar.set(
+                Calendar.HOUR_OF_DAY,
+                0
+        );
+
+        calendar.set(
+                Calendar.MINUTE,
+                0
+        );
+
+        calendar.set(
+                Calendar.SECOND,
+                0
+        );
+
+        calendar.set(
+                Calendar.MILLISECOND,
+                0
+        );
+
+    }
+
+    /*
+
+     * ================================================================
+     * מפתח תאריך ללוח
+     *
+     * yyyy-MM-dd
+     * ================================================================
+     */
+
+    private String formatDateKey(
+            Calendar calendar) {
+
+
+        return String.format(
+                Locale.US,
+                "%04d-%02d-%02d",
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH) + 1,
+                calendar.get(Calendar.DAY_OF_MONTH)
+        );
+
+    }
+
+
 
 
     /*
@@ -414,19 +806,37 @@ public class HebrewCalendarFragment extends Fragment {
      * ============================================================
      */
 
+
     public static class CalendarEntry {
+
 
         String id;
 
-        String gregorianDate;
+        String startDate;
+        String endDate;
+
         String hebrewDate;
 
         String type;
 
         String title;
-        String time;
+
+        String startTime;
+        String endTime;
+
+        boolean allDay;
+
+        String location;
+
+        String link;
+
+        String reminder;
+
         String description;
+
     }
+
+
 
 
     /*
@@ -491,7 +901,7 @@ public class HebrewCalendarFragment extends Fragment {
 
         private float scaleFactor = 1f;
 
-        private final float MAX_SCALE = 4f;
+        private final float MAX_SCALE = 1.3f;
 
 
         private float getMinScale() {
@@ -1019,7 +1429,7 @@ public class HebrewCalendarFragment extends Fragment {
             float targetScale =
                     Math.max(
                             getMinScale(),
-                            1.25f
+                            0.75f
                     );
 
             targetScale =
@@ -2009,20 +2419,35 @@ public class HebrewCalendarFragment extends Fragment {
                 );
 
 
-                String gregorianDate =
-                        String.format(
-                                Locale.getDefault(),
-                                "%02d/%02d/%04d",
-                                day,
-                                month + 1,
-                                year
-                        );
 
+                String dateKey =
+                        String.format(
+                                Locale.US,
+                                "%04d-%02d-%02d",
+                                year,
+                                month + 1,
+                                day
+                        );
 
                 List<CalendarEntry> entries =
                         calendarEntries.get(
-                                gregorianDate
+                                dateKey
                         );
+
+                if (entries != null &&
+                        !entries.isEmpty()) {
+
+                    drawEntryIndicators(
+                            canvas,
+                            entries,
+                            x,
+                            top
+                    );
+
+
+                }
+
+
 
 
                 if (entries != null &&
@@ -3264,14 +3689,17 @@ public class HebrewCalendarFragment extends Fragment {
             }
 
 
+
             String gregorianDate =
                     String.format(
-                            Locale.getDefault(),
-                            "%02d/%02d/%04d",
-                            day,
+                            Locale.US,
+                            "%04d-%02d-%02d",
+                            year,
                             month + 1,
-                            year
+                            day
                     );
+
+
 
 
             Calendar selectedDate =

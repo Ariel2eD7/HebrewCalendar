@@ -1,50 +1,54 @@
 package com.israel.hebrewcalendar;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.*;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FieldValue;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Date;
 import java.util.List;
-import java.util.Map;
-
+import java.util.Locale;
 
 public class DayDetailsActivity extends AppCompatActivity {
 
-    private Spinner typeSpinner;
-
-    private EditText titleEditText;
-    private EditText timeEditText;
-    private EditText descriptionEditText;
-
-    private Button saveButton;
-    private Button cancelButton;
-
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
-
-    private String gregorianDate;
-    private String hebrewDate;
-
-    private String editingDocumentId = null;
+     private TextView dayTitleTextView;
 
     private LinearLayout entriesContainer;
 
+    private Button addButton;
+
+    private FirebaseAuth mAuth;
+
+    private FirebaseFirestore db;
+
+    private String gregorianDate;
+
+    private String hebrewDate;
+
     private final List<CalendarEntry> entries =
             new ArrayList<>();
+
+
+    private static final String FIRESTORE_DATE_FORMAT =
+            "yyyy-MM-dd";
 
 
     @Override
@@ -53,7 +57,9 @@ public class DayDetailsActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.day_details);
+        setContentView(
+                R.layout.day_details
+        );
 
 
         mAuth =
@@ -63,23 +69,22 @@ public class DayDetailsActivity extends AppCompatActivity {
                 FirebaseFirestore.getInstance();
 
 
-        typeSpinner =
-                findViewById(R.id.typeSpinner);
+        dayTitleTextView =
+                findViewById(
+                        R.id.dayTitleTextView
+                );
 
-        titleEditText =
-                findViewById(R.id.titleEditText);
 
-        timeEditText =
-                findViewById(R.id.timeEditText);
+        entriesContainer =
+                findViewById(
+                        R.id.entriesContainer
+                );
 
-        descriptionEditText =
-                findViewById(R.id.descriptionEditText);
 
-        saveButton =
-                findViewById(R.id.saveButton);
-
-        cancelButton =
-                findViewById(R.id.cancelButton);
+        addButton =
+                findViewById(
+                        R.id.addButton
+                );
 
 
         gregorianDate =
@@ -94,154 +99,57 @@ public class DayDetailsActivity extends AppCompatActivity {
                 );
 
 
-        /*
-         * סוגי נתונים.
-         *
-         * אין יותר amount / הכנסה בתוך אירוע.
-         * הכנסה היא סוג נפרד.
-         */
-        String[] types = {
-
-                "אירוע",
-                "הכנסה",
-                "הוצאה",
-                "הערה"
-        };
+        updateDayTitle();
 
 
-        ArrayAdapter<String> adapter =
-                new ArrayAdapter<>(
-                        this,
-                        android.R.layout.simple_spinner_item,
-                        types
-                );
-
-
-        adapter.setDropDownViewResource(
-                android.R.layout.simple_spinner_dropdown_item
+        addButton.setOnClickListener(
+                v -> showAddDialog()
         );
+    }
 
 
-        typeSpinner.setAdapter(adapter);
+    @Override
+    protected void onResume() {
 
+        super.onResume();
 
-        /*
-         * מוצאים את ה־ViewGroup הראשי
-         * כדי להוסיף אליו את רשימת האירועים.
-         */
-        View content =
-                findViewById(android.R.id.content);
-
-
-        if (content instanceof ViewGroup) {
-
-            ViewGroup root =
-                    (ViewGroup) content;
-
-
-            entriesContainer =
-                    new LinearLayout(this);
-
-
-            entriesContainer.setOrientation(
-                    LinearLayout.VERTICAL
-            );
-
-
-            entriesContainer.setPadding(
-                    20,
-                    20,
-                    20,
-                    20
-            );
-
-
-            TextView title =
-                    new TextView(this);
-
-
-            title.setText(
-                    "הנתונים הקיימים ביום"
-            );
-
-
-            title.setTextSize(18);
-
-            title.setTextColor(
-                    Color.BLACK
-            );
-
-            title.setGravity(
-                    Gravity.CENTER
-            );
-
-
-            entriesContainer.addView(
-                    title,
-                    new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-            );
-
-
-            /*
-             * הוספת הרשימה בתחתית המסך.
-             */
-            root.addView(
-                    entriesContainer,
-                    new ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-            );
-        }
-
-
-        /*
-         * ביטול.
-         */
-        cancelButton.setOnClickListener(
-                v -> finish()
-        );
-
-
-        /*
-         * שמירה.
-         */
-        saveButton.setOnClickListener(
-                v -> saveDataToFirebase()
-        );
-
-
-        /*
-         * טעינת הנתונים הקיימים.
-         */
         loadEntries();
     }
 
 
     /*
      * ============================================================
-     * מודל אירוע
+     * כותרת היום
      * ============================================================
      */
-    private static class CalendarEntry {
 
-        String id;
+    private void updateDayTitle() {
 
-        String type;
-        String title;
-        String time;
-        String description;
+        if (gregorianDate == null) {
+
+            dayTitleTextView.setText(
+                    "אירועי היום"
+            );
+
+            return;
+        }
+
+
+        dayTitleTextView.setText(
+                "אירועים ביום " +
+                        formatDateForDisplay(
+                                gregorianDate
+                        )
+        );
     }
 
 
     /*
      * ============================================================
-     * טעינת כל הנתונים של היום
+     * טעינת האירועים
      * ============================================================
      */
+
     private void loadEntries() {
 
         FirebaseUser currentUser =
@@ -249,21 +157,18 @@ public class DayDetailsActivity extends AppCompatActivity {
 
 
         if (currentUser == null) {
+
+            displayEntries();
+
             return;
         }
 
 
-        String userId =
-                currentUser.getUid();
-
-
         db.collection("users")
-                .document(userId)
-                .collection("calendarEntries")
-                .whereEqualTo(
-                        "gregorianDate",
-                        gregorianDate
+                .document(
+                        currentUser.getUid()
                 )
+                .collection("calendarEntries")
                 .get()
                 .addOnSuccessListener(
                         querySnapshot -> {
@@ -271,8 +176,78 @@ public class DayDetailsActivity extends AppCompatActivity {
                             entries.clear();
 
 
+                            String selectedDate =
+                                    normalizeDate(
+                                            gregorianDate
+                                    );
+
+
+                            if (selectedDate == null) {
+
+                                displayEntries();
+
+                                return;
+                            }
+
+
                             for (DocumentSnapshot document :
                                     querySnapshot.getDocuments()) {
+
+                                String startDate =
+                                        document.getString(
+                                                "startDate"
+                                        );
+
+
+                                String endDate =
+                                        document.getString(
+                                                "endDate"
+                                        );
+
+
+                                /*
+                                 * תמיכה באירועים ישנים.
+                                 */
+
+                                if (startDate == null ||
+                                        startDate.trim().isEmpty()) {
+
+                                    String oldDate =
+                                            document.getString(
+                                                    "gregorianDate"
+                                            );
+
+
+                                    if (oldDate != null &&
+                                            !oldDate.trim().isEmpty()) {
+
+                                        startDate =
+                                                normalizeDate(
+                                                        oldDate
+                                                );
+
+                                        endDate =
+                                                startDate;
+                                    }
+                                }
+
+
+                                if (startDate == null ||
+                                        endDate == null) {
+
+                                    continue;
+                                }
+
+
+                                if (!isDateInsideRange(
+                                        selectedDate,
+                                        startDate,
+                                        endDate
+                                )) {
+
+                                    continue;
+                                }
+
 
                                 CalendarEntry entry =
                                         new CalendarEntry();
@@ -282,21 +257,52 @@ public class DayDetailsActivity extends AppCompatActivity {
                                         document.getId();
 
 
-                                entry.type =
-                                        document.getString(
-                                                "type"
-                                        );
-
-
                                 entry.title =
                                         document.getString(
                                                 "title"
                                         );
 
 
-                                entry.time =
+                                entry.type =
                                         document.getString(
-                                                "time"
+                                                "type"
+                                        );
+
+
+                                entry.startDate =
+                                        startDate;
+
+
+                                entry.endDate =
+                                        endDate;
+
+
+                                entry.startTime =
+                                        document.getString(
+                                                "startTime"
+                                        );
+
+
+                                entry.endTime =
+                                        document.getString(
+                                                "endTime"
+                                        );
+
+
+                                Boolean allDay =
+                                        document.getBoolean(
+                                                "allDay"
+                                        );
+
+
+                                entry.allDay =
+                                        allDay != null &&
+                                                allDay;
+
+
+                                entry.location =
+                                        document.getString(
+                                                "location"
                                         );
 
 
@@ -306,7 +312,9 @@ public class DayDetailsActivity extends AppCompatActivity {
                                         );
 
 
-                                entries.add(entry);
+                                entries.add(
+                                        entry
+                                );
                             }
 
 
@@ -316,7 +324,7 @@ public class DayDetailsActivity extends AppCompatActivity {
                 .addOnFailureListener(
                         e -> Toast.makeText(
                                 this,
-                                "טעינת הנתונים נכשלה: "
+                                "טעינת האירועים נכשלה: "
                                         + e.getMessage(),
                                 Toast.LENGTH_LONG
                         )
@@ -326,26 +334,47 @@ public class DayDetailsActivity extends AppCompatActivity {
 
     /*
      * ============================================================
-     * הצגת האירועים הקיימים
+     * הצגת האירועים
      * ============================================================
      */
+
     private void displayEntries() {
 
-        if (entriesContainer == null) {
+        entriesContainer.removeAllViews();
+
+
+        if (entries.isEmpty()) {
+
+            TextView empty =
+                    new TextView(this);
+
+
+            empty.setText(
+                    "אין אירועים ביום הזה"
+            );
+
+
+            empty.setTextSize(17);
+
+            empty.setTextColor(
+                    Color.GRAY
+            );
+
+            empty.setGravity(
+                    android.view.Gravity.CENTER
+            );
+
+
+            entriesContainer.addView(
+                    empty
+            );
+
             return;
         }
 
 
-        /*
-         * שומרים את הכותרת הראשונה.
-         */
-        while (entriesContainer.getChildCount() > 1) {
-
-            entriesContainer.removeViewAt(1);
-        }
-
-
-        for (CalendarEntry entry : entries) {
+        for (CalendarEntry entry :
+                entries) {
 
             LinearLayout item =
                     new LinearLayout(this);
@@ -358,14 +387,18 @@ public class DayDetailsActivity extends AppCompatActivity {
 
             item.setPadding(
                     20,
-                    16,
+                    18,
                     20,
-                    16
+                    18
             );
 
 
             item.setBackgroundColor(
-                    getTypeColor(entry.type)
+                    Color.rgb(
+                            220,
+                            235,
+                            255
+                    )
             );
 
 
@@ -378,10 +411,16 @@ public class DayDetailsActivity extends AppCompatActivity {
             );
 
 
-            title.setTextSize(17);
+            title.setTextSize(18);
 
             title.setTextColor(
                     Color.BLACK
+            );
+
+
+            title.setTypeface(
+                    null,
+                    android.graphics.Typeface.BOLD
             );
 
 
@@ -393,18 +432,73 @@ public class DayDetailsActivity extends AppCompatActivity {
                     new StringBuilder();
 
 
-            String typeName =
-                    getTypeName(entry.type);
+            if (entry.allDay) {
+
+                text.append(
+                        "כל היום"
+                );
+
+            } else {
+
+                if (entry.startTime != null &&
+                        !entry.startTime.isEmpty()) {
+
+                    text.append(
+                            entry.startTime
+                    );
 
 
-            text.append(typeName);
+                    if (entry.endTime != null &&
+                            !entry.endTime.isEmpty()) {
+
+                        text.append(
+                                " → "
+                        );
+
+                        text.append(
+                                entry.endTime
+                        );
+                    }
+                }
+            }
 
 
-            if (entry.time != null &&
-                    !entry.time.trim().isEmpty()) {
+            if (entry.startDate != null &&
+                    entry.endDate != null &&
+                    !entry.startDate.equals(
+                            entry.endDate
+                    )) {
 
-                text.append("  •  ");
-                text.append(entry.time);
+                if (text.length() > 0) {
+                    text.append("\n");
+                }
+
+                text.append(
+                        formatDateForDisplay(
+                                entry.startDate
+                        )
+                );
+
+                text.append(
+                        " → "
+                );
+
+                text.append(
+                        formatDateForDisplay(
+                                entry.endDate
+                        )
+                );
+            }
+
+
+            if (entry.location != null &&
+                    !entry.location.trim().isEmpty()) {
+
+                text.append("\n📍 ");
+
+                text.append(
+                        entry.location
+                );
             }
 
 
@@ -412,7 +506,10 @@ public class DayDetailsActivity extends AppCompatActivity {
                     !entry.description.trim().isEmpty()) {
 
                 text.append("\n");
-                text.append(entry.description);
+
+                text.append(
+                        entry.description
+                );
             }
 
 
@@ -429,44 +526,27 @@ public class DayDetailsActivity extends AppCompatActivity {
 
 
             item.addView(
-                    title,
-                    new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
+                    title
             );
 
 
             item.addView(
-                    details,
-                    new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
-            );
-
-
-            /*
-             * לחיצה על אירוע קיים =
-             * טעינה לטופס לעריכה.
-             */
-            item.setOnClickListener(
-                    v -> loadEntryForEditing(entry)
+                    details
             );
 
 
             LinearLayout.LayoutParams params =
                     new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
                     );
 
 
             params.setMargins(
                     0,
-                    8,
                     0,
-                    8
+                    0,
+                    12
             );
 
 
@@ -474,40 +554,16 @@ public class DayDetailsActivity extends AppCompatActivity {
                     item,
                     params
             );
-        }
 
 
-        /*
-         * אם אין נתונים.
-         */
-        if (entries.isEmpty()) {
+            /*
+             * לחיצה על אירוע =
+             * עריכה.
+             */
 
-            TextView empty =
-                    new TextView(this);
-
-
-            empty.setText(
-                    "אין עדיין נתונים ביום הזה"
-            );
-
-
-            empty.setTextSize(15);
-
-            empty.setTextColor(
-                    Color.GRAY
-            );
-
-
-            empty.setGravity(
-                    Gravity.CENTER
-            );
-
-
-            entriesContainer.addView(
-                    empty,
-                    new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
+            item.setOnClickListener(
+                    v -> openEventForEditing(
+                            entry.id
                     )
             );
         }
@@ -516,411 +572,391 @@ public class DayDetailsActivity extends AppCompatActivity {
 
     /*
      * ============================================================
-     * טעינת אירוע קיים לעריכה
+     * חלון "מה להוסיף?"
      * ============================================================
      */
-    private void loadEntryForEditing(
-            CalendarEntry entry) {
 
-        editingDocumentId =
-                entry.id;
+    private void showAddDialog() {
 
-
-        titleEditText.setText(
-                safe(entry.title)
-        );
+        final Spinner spinner =
+                new Spinner(this);
 
 
-        timeEditText.setText(
-                safe(entry.time)
-        );
+        String[] types = {
+
+                "אירוע"
+        };
 
 
-        descriptionEditText.setText(
-                safe(entry.description)
-        );
-
-
-        int spinnerPosition =
-                getTypeSpinnerPosition(
-                        entry.type
+        ArrayAdapter<String> adapter =
+                new ArrayAdapter<>(
+                        this,
+                        android.R.layout.simple_spinner_item,
+                        types
                 );
 
 
-        if (spinnerPosition >= 0) {
-
-            typeSpinner.setSelection(
-                    spinnerPosition
-            );
-        }
-
-
-        saveButton.setText(
-                "עדכון"
+        adapter.setDropDownViewResource(
+                android.R.layout.simple_spinner_dropdown_item
         );
 
 
-        Toast.makeText(
-                this,
-                "האירוע נטען לעריכה",
-                Toast.LENGTH_SHORT
-        ).show();
+        spinner.setAdapter(
+                adapter
+        );
+
+
+        LinearLayout container =
+                new LinearLayout(this);
+
+
+        container.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+
+        int padding =
+                (int) (
+                        24 *
+                                getResources()
+                                        .getDisplayMetrics()
+                                        .density
+                );
+
+
+        container.setPadding(
+                padding,
+                0,
+                padding,
+                0
+        );
+
+
+        TextView label =
+                new TextView(this);
+
+
+        label.setText(
+                "מה תרצה להוסיף?"
+        );
+
+
+        label.setTextSize(16);
+
+
+        container.addView(
+                label
+        );
+
+
+        container.addView(
+                spinner
+        );
+
+
+        new AlertDialog.Builder(this)
+                .setTitle(
+                        "הוספת נתון"
+                )
+                .setView(
+                        container
+                )
+                .setNegativeButton(
+                        "ביטול",
+                        null
+                )
+                .setPositiveButton(
+                        "המשך",
+                        (dialog, which) -> {
+
+                            String selected =
+                                    spinner
+                                            .getSelectedItem()
+                                            .toString();
+
+
+                            if ("אירוע".equals(
+                                    selected
+                            )) {
+
+                                openNewEvent();
+                            }
+                        }
+                )
+                .show();
     }
 
 
     /*
      * ============================================================
-     * שמירה / עדכון
+     * אירוע חדש
      * ============================================================
      */
-    private void saveDataToFirebase() {
 
-        String title =
-                titleEditText.getText()
-                        .toString()
-                        .trim();
+    private void openNewEvent() {
 
-
-        String time =
-                timeEditText.getText()
-                        .toString()
-                        .trim();
-
-
-        String description =
-                descriptionEditText.getText()
-                        .toString()
-                        .trim();
-
-
-        FirebaseUser currentUser =
-                mAuth.getCurrentUser();
-
-
-        if (currentUser == null) {
-
-            Toast.makeText(
-                    this,
-                    "אין משתמש מחובר",
-                    Toast.LENGTH_LONG
-            ).show();
-
-            return;
-        }
-
-
-        if (title.isEmpty()) {
-
-            titleEditText.setError(
-                    "נא להזין כותרת"
-            );
-
-
-            titleEditText.requestFocus();
-
-            return;
-        }
-
-
-        String selectedType =
-                typeSpinner
-                        .getSelectedItem()
-                        .toString();
-
-
-        String type =
-                convertType(
-                        selectedType
+        Intent intent =
+                new Intent(
+                        this,
+                        EventActivity.class
                 );
 
 
-        String userId =
-                currentUser.getUid();
-
-
-        Map<String, Object> entry =
-                new HashMap<>();
-
-
-        entry.put(
-                "gregorianDate",
+        intent.putExtra(
+                "gregorian_date",
                 gregorianDate
         );
 
 
-        entry.put(
-                "hebrewDate",
+        intent.putExtra(
+                "hebrew_date",
                 hebrewDate
         );
 
 
-        entry.put(
-                "type",
-                type
+        startActivity(
+                intent
+        );
+    }
+
+
+    /*
+     * ============================================================
+     * עריכת אירוע
+     * ============================================================
+     */
+
+    private void openEventForEditing(
+            String eventId) {
+
+        Intent intent =
+                new Intent(
+                        this,
+                        EventActivity.class
+                );
+
+
+        intent.putExtra(
+                "event_id",
+                eventId
         );
 
 
-        entry.put(
-                "title",
-                title
+        startActivity(
+                intent
         );
+    }
 
 
-        entry.put(
-                "time",
-                time
-        );
+    /*
+     * ============================================================
+     * בדיקה האם היום בתוך טווח
+     * ============================================================
+     */
+
+    private boolean isDateInsideRange(
+            String selectedDate,
+            String startDate,
+            String endDate) {
+
+        Date selected =
+                parseFirestoreDate(
+                        selectedDate
+                );
 
 
-        entry.put(
-                "description",
-                description
-        );
+        Date start =
+                parseFirestoreDate(
+                        startDate
+                );
 
 
-        if (editingDocumentId != null) {
-
-            /*
-             * עדכון אירוע קיים.
-             */
-            db.collection("users")
-                    .document(userId)
-                    .collection("calendarEntries")
-                    .document(editingDocumentId)
-                    .update(entry)
-                    .addOnSuccessListener(
-                            unused -> {
-
-                                Toast.makeText(
-                                        this,
-                                        "הנתונים עודכנו בהצלחה",
-                                        Toast.LENGTH_SHORT
-                                ).show();
+        Date end =
+                parseFirestoreDate(
+                        endDate
+                );
 
 
-                                editingDocumentId =
-                                        null;
+        if (selected == null ||
+                start == null ||
+                end == null) {
+
+            return false;
+        }
 
 
-                                saveButton.setText(
-                                        "שמירה"
-                                );
+        return !selected.before(start)
+                &&
+                !selected.after(end);
+    }
 
 
-                                clearForm();
+    /*
+     * ============================================================
+     * נרמול תאריך
+     * ============================================================
+     */
+
+    private String normalizeDate(
+            String value) {
+
+        if (value == null ||
+                value.trim().isEmpty()) {
+
+            return null;
+        }
 
 
-                                loadEntries();
-                            }
-                    )
-                    .addOnFailureListener(
-                            e -> Toast.makeText(
-                                    this,
-                                    "עדכון הנתונים נכשל: "
-                                            + e.getMessage(),
-                                    Toast.LENGTH_LONG
-                            )
+        if (value.matches(
+                "\\d{4}-\\d{2}-\\d{2}"
+        )) {
+
+            return value;
+        }
+
+
+        try {
+
+            SimpleDateFormat oldFormat =
+                    new SimpleDateFormat(
+                            "dd/MM/yyyy",
+                            Locale.US
                     );
 
 
-        } else {
-
-            /*
-             * יצירת אירוע חדש.
-             */
-            entry.put(
-                    "createdAt",
-                    FieldValue.serverTimestamp()
-            );
+            oldFormat.setLenient(false);
 
 
-            db.collection("users")
-                    .document(userId)
-                    .collection("calendarEntries")
-                    .add(entry)
-                    .addOnSuccessListener(
-                            documentReference -> {
-
-                                Toast.makeText(
-                                        this,
-                                        "הנתונים נשמרו בהצלחה",
-                                        Toast.LENGTH_SHORT
-                                ).show();
-
-
-                                clearForm();
-
-                                loadEntries();
-                            }
-                    )
-                    .addOnFailureListener(
-                            e -> Toast.makeText(
-                                    this,
-                                    "שמירת הנתונים נכשלה: "
-                                            + e.getMessage(),
-                                    Toast.LENGTH_LONG
-                            )
+            Date date =
+                    oldFormat.parse(
+                            value
                     );
-        }
-    }
 
 
-    /*
-     * ============================================================
-     * המרת סוג
-     * ============================================================
-     */
-    private String convertType(
-            String selectedType) {
-
-        switch (selectedType) {
-
-            case "הכנסה":
-                return "income";
-
-            case "הוצאה":
-                return "expense";
-
-            case "הערה":
-                return "note";
-
-            default:
-                return "event";
-        }
-    }
+            if (date == null) {
+                return null;
+            }
 
 
-    /*
-     * ============================================================
-     * מיקום Spinner
-     * ============================================================
-     */
-    private int getTypeSpinnerPosition(
-            String type) {
-
-        if ("income".equals(type)) {
-            return 1;
-        }
+            SimpleDateFormat newFormat =
+                    new SimpleDateFormat(
+                            FIRESTORE_DATE_FORMAT,
+                            Locale.US
+                    );
 
 
-        if ("expense".equals(type)) {
-            return 2;
-        }
-
-
-        if ("note".equals(type)) {
-            return 3;
-        }
-
-
-        return 0;
-    }
-
-
-    /*
-     * ============================================================
-     * שם סוג בעברית
-     * ============================================================
-     */
-    private String getTypeName(
-            String type) {
-
-        if ("income".equals(type)) {
-            return "הכנסה";
-        }
-
-
-        if ("expense".equals(type)) {
-            return "הוצאה";
-        }
-
-
-        if ("note".equals(type)) {
-            return "הערה";
-        }
-
-
-        return "אירוע";
-    }
-
-
-    /*
-     * ============================================================
-     * צבע לפי סוג
-     * ============================================================
-     */
-    private int getTypeColor(
-            String type) {
-
-        if ("income".equals(type)) {
-
-            return Color.rgb(
-                    220,
-                    245,
-                    220
+            return newFormat.format(
+                    date
             );
+
+        } catch (ParseException e) {
+
+            return null;
         }
+    }
 
 
-        if ("expense".equals(type)) {
+    /*
+     * ============================================================
+     * Parse Firestore date
+     * ============================================================
+     */
 
-            return Color.rgb(
-                    255,
-                    225,
-                    225
+    private Date parseFirestoreDate(
+            String value) {
+
+        try {
+
+            SimpleDateFormat format =
+                    new SimpleDateFormat(
+                            FIRESTORE_DATE_FORMAT,
+                            Locale.US
+                    );
+
+
+            format.setLenient(false);
+
+
+            return format.parse(
+                    value
             );
+
+        } catch (Exception e) {
+
+            return null;
+        }
+    }
+
+
+    /*
+     * ============================================================
+     * הצגת תאריך
+     * ============================================================
+     */
+
+    private String formatDateForDisplay(
+            String value) {
+
+        Date date =
+                parseFirestoreDate(
+                        value
+                );
+
+
+        if (date == null) {
+            return value;
         }
 
 
-        if ("note".equals(type)) {
-
-            return Color.rgb(
-                    255,
-                    245,
-                    205
-            );
-        }
+        SimpleDateFormat format =
+                new SimpleDateFormat(
+                        "dd/MM/yyyy",
+                        Locale.US
+                );
 
 
-        return Color.rgb(
-                220,
-                235,
-                255
+        return format.format(
+                date
         );
     }
 
 
-    /*
-     * ============================================================
-     * ניקוי הטופס
-     * ============================================================
-     */
-    private void clearForm() {
-
-        editingDocumentId =
-                null;
-
-
-        titleEditText.setText("");
-
-        timeEditText.setText("");
-
-        descriptionEditText.setText("");
-
-
-        typeSpinner.setSelection(0);
-
-
-        saveButton.setText(
-                "שמירה"
-        );
-    }
-
-
-    private String safe(String value) {
+    private String safe(
+            String value) {
 
         return value == null
                 ? ""
                 : value;
     }
+
+
+    /*
+     * ============================================================
+     * מודל אירוע
+     * ============================================================
+     */
+
+    private static class CalendarEntry {
+
+        String id;
+
+        String title;
+
+        String type;
+
+        String startDate;
+
+        String endDate;
+
+        String startTime;
+
+        String endTime;
+
+        boolean allDay;
+
+        String location;
+
+        String description;
+    }
+
 }
