@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:fillViewport="true">
 
-     <LinearLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -149,6 +149,8 @@
             android:inputType="textCapSentences|textMultiLine"
             android:layout_marginBottom="24dp" />
 
+        <!-- כפתורי שמירה וביטול -->
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -173,6 +175,20 @@
                 android:text="שמירה" />
 
         </LinearLayout>
+
+
+        <!-- כפתור מחיקה -->
+
+        <Button
+            android:id="@+id/deleteButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="מחיקת האירוע"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#D32F2F"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone" />
 
     </LinearLayout>
 

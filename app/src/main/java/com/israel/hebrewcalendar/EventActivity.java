@@ -1,5 +1,6 @@
 package com.israel.hebrewcalendar;
 
+import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.os.Bundle;
@@ -46,6 +47,7 @@ public class EventActivity extends AppCompatActivity {
 
     private Button saveButton;
     private Button cancelButton;
+    private Button deleteButton;
 
     private final Calendar startCalendar =
             Calendar.getInstance();
@@ -123,6 +125,9 @@ public class EventActivity extends AppCompatActivity {
         cancelButton =
                 findViewById(R.id.cancelButton);
 
+        deleteButton =
+                findViewById(R.id.deleteButton);
+
 
         gregorianDate =
                 getIntent().getStringExtra(
@@ -141,7 +146,6 @@ public class EventActivity extends AppCompatActivity {
 
 
         setupReminderSpinner();
-
 
         initializeDates();
 
@@ -197,13 +201,22 @@ public class EventActivity extends AppCompatActivity {
 
         /*
          * אם eventId קיים,
-         * אנחנו במצב עריכה.
+         * אנחנו במצב עריכה ולכן מציגים
+         * את כפתור המחיקה.
          */
         if (eventId != null &&
                 !eventId.trim().isEmpty()) {
 
             saveButton.setText(
                     "עדכון"
+            );
+
+            deleteButton.setVisibility(
+                    View.VISIBLE
+            );
+
+            deleteButton.setOnClickListener(
+                    v -> confirmDeleteEvent()
             );
 
             loadEvent();
@@ -213,7 +226,122 @@ public class EventActivity extends AppCompatActivity {
             saveButton.setText(
                     "שמירה"
             );
+
+            /*
+             * ביצירת אירוע חדש אין מה למחוק.
+             */
+            deleteButton.setVisibility(
+                    View.GONE
+            );
         }
+    }
+
+
+    /*
+     * ============================================================
+     * אישור מחיקת אירוע
+     * ============================================================
+     */
+
+    private void confirmDeleteEvent() {
+
+        new AlertDialog.Builder(this)
+                .setTitle("מחיקת אירוע")
+                .setMessage(
+                        "האם אתה בטוח שברצונך למחוק את האירוע?"
+                )
+                .setNegativeButton(
+                        "ביטול",
+                        null
+                )
+                .setPositiveButton(
+                        "מחיקה",
+                        (dialog, which) ->
+                                deleteEvent()
+                )
+                .show();
+    }
+
+
+    /*
+     * ============================================================
+     * מחיקת אירוע מ-Firestore
+     * ============================================================
+     */
+
+    private void deleteEvent() {
+
+        FirebaseUser currentUser =
+                mAuth.getCurrentUser();
+
+
+        if (currentUser == null) {
+
+            Toast.makeText(
+                    this,
+                    "אין משתמש מחובר",
+                    Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+
+        if (eventId == null ||
+                eventId.trim().isEmpty()) {
+
+            Toast.makeText(
+                    this,
+                    "לא נמצא מזהה אירוע",
+                    Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+
+        String userId =
+                currentUser.getUid();
+
+
+        /*
+         * מונעים לחיצות נוספות בזמן המחיקה.
+         */
+        deleteButton.setEnabled(false);
+        saveButton.setEnabled(false);
+
+
+        db.collection("users")
+                .document(userId)
+                .collection("calendarEntries")
+                .document(eventId)
+                .delete()
+                .addOnSuccessListener(
+                        unused -> {
+
+                            Toast.makeText(
+                                    this,
+                                    "האירוע נמחק בהצלחה",
+                                    Toast.LENGTH_SHORT
+                            ).show();
+
+                            finish();
+                        }
+                )
+                .addOnFailureListener(
+                        e -> {
+
+                            deleteButton.setEnabled(true);
+                            saveButton.setEnabled(true);
+
+                            Toast.makeText(
+                                    this,
+                                    "מחיקת האירוע נכשלה: "
+                                            + e.getMessage(),
+                                    Toast.LENGTH_LONG
+                            ).show();
+                        }
+                );
     }
 
 
@@ -337,9 +465,7 @@ public class EventActivity extends AppCompatActivity {
         );
 
 
-        reminderSpinner.setAdapter(
-                adapter
-        );
+        reminderSpinner.setAdapter(adapter);
 
         reminderSpinner.setSelection(0);
     }
