@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -19,127 +17,82 @@
             android:textSize="26sp"
             android:textStyle="bold"
             android:gravity="center"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="24dp"/>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="כותרת"
-            android:textStyle="bold" />
-
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="כותרת" android:textStyle="bold"/>
         <EditText
             android:id="@+id/titleEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="שם האירוע"
             android:inputType="textCapSentences"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"/>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="תאריך התחלה"
-            android:textStyle="bold" />
-
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="תאריך התחלה" android:textStyle="bold"/>
         <Button
             android:id="@+id/startDateButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="29/09/2026"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="12dp"/>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="שעת התחלה"
-            android:textStyle="bold" />
-
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="שעת התחלה" android:textStyle="bold"/>
         <Button
             android:id="@+id/startTimeButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="14:00"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"/>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="תאריך סיום"
-            android:textStyle="bold" />
-
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="תאריך סיום" android:textStyle="bold"/>
         <Button
             android:id="@+id/endDateButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="29/09/2026"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="12dp"/>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="שעת סיום"
-            android:textStyle="bold" />
-
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="שעת סיום" android:textStyle="bold"/>
         <Button
             android:id="@+id/endTimeButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="15:00"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"/>
 
         <CheckBox
             android:id="@+id/allDayCheckBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="כל היום"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"/>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="מיקום"
-            android:textStyle="bold" />
-
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="מיקום" android:textStyle="bold"/>
         <EditText
             android:id="@+id/locationEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="הזן מיקום"
             android:inputType="textCapSentences"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"/>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="וידאו / קישור"
-            android:textStyle="bold" />
-
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="וידאו / קישור" android:textStyle="bold"/>
         <EditText
             android:id="@+id/linkEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="https://..."
             android:inputType="textUri"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"/>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="התראה"
-            android:textStyle="bold" />
-
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="התראה" android:textStyle="bold"/>
         <Spinner
             android:id="@+id/reminderSpinner"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"/>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="תיאור"
-            android:textStyle="bold" />
-
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="תיאור" android:textStyle="bold"/>
         <EditText
             android:id="@+id/descriptionEditText"
             android:layout_width="match_parent"
@@ -147,9 +100,7 @@
             android:hint="הוסף תיאור"
             android:gravity="top"
             android:inputType="textCapSentences|textMultiLine"
-            android:layout_marginBottom="24dp" />
-
-        <!-- כפתורי שמירה וביטול -->
+            android:layout_marginBottom="24dp"/>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -161,23 +112,17 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="ביטול" />
+                android:text="ביטול"/>
 
-            <Space
-                android:layout_width="12dp"
-                android:layout_height="1dp" />
+            <Space android:layout_width="12dp" android:layout_height="1dp"/>
 
             <Button
                 android:id="@+id/saveButton"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="שמירה" />
-
+                android:text="שמירה"/>
         </LinearLayout>
-
-
-        <!-- כפתור מחיקה -->
 
         <Button
             android:id="@+id/deleteButton"
@@ -188,8 +133,7 @@
             android:backgroundTint="#D32F2F"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp"
-            android:visibility="gone" />
+            android:visibility="gone"/>
 
     </LinearLayout>
-
 </ScrollView>

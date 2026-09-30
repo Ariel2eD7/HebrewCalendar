@@ -1,1494 +1,389 @@
 package com.israel.hebrewcalendar;
 
-import android.app.AlertDialog;
-import android.app.DatePickerDialog;
-import android.app.TimePickerDialog;
+import android.app.*;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.EditText;
-import android.widget.Spinner;
-import android.widget.Toast;
-
+import android.widget.*;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.FirebaseFirestore;
-
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import com.google.firebase.auth.*;
+import com.google.firebase.firestore.*;
+import java.text.*;
+import java.util.*;
 
 public class EventActivity extends AppCompatActivity {
 
-    private EditText titleEditText;
-    private EditText locationEditText;
-    private EditText linkEditText;
-    private EditText descriptionEditText;
-
-    private Button startDateButton;
-    private Button startTimeButton;
-    private Button endDateButton;
-    private Button endTimeButton;
-
+    private EditText titleEditText, locationEditText, linkEditText, descriptionEditText;
+    private Button startDateButton, startTimeButton, endDateButton, endTimeButton,
+            saveButton, cancelButton, deleteButton;
     private CheckBox allDayCheckBox;
-
     private Spinner reminderSpinner;
-
-    private Button saveButton;
-    private Button cancelButton;
-    private Button deleteButton;
-
-    private final Calendar startCalendar =
-            Calendar.getInstance();
-
-    private final Calendar endCalendar =
-            Calendar.getInstance();
-
+    private final Calendar startCalendar = Calendar.getInstance(), endCalendar = Calendar.getInstance();
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
-
-    private String gregorianDate;
-    private String hebrewDate;
-
-    private String eventId;
-
-    private static final String FIRESTORE_DATE_FORMAT =
-            "yyyy-MM-dd";
-
-    private static final String DISPLAY_DATE_FORMAT =
-            "dd/MM/yyyy";
-
-    private static final String TIME_FORMAT =
-            "HH:mm";
-
+    private String gregorianDate, hebrewDate, eventId;
 
     @Override
-    protected void onCreate(
-            @Nullable Bundle savedInstanceState) {
-
-        super.onCreate(savedInstanceState);
-
+    protected void onCreate(@Nullable Bundle b) {
+        super.onCreate(b);
         setContentView(R.layout.event);
 
+        mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
 
-        mAuth =
-                FirebaseAuth.getInstance();
+        titleEditText = findViewById(R.id.titleEditText);
+        locationEditText = findViewById(R.id.locationEditText);
+        linkEditText = findViewById(R.id.linkEditText);
+        descriptionEditText = findViewById(R.id.descriptionEditText);
+        startDateButton = findViewById(R.id.startDateButton);
+        startTimeButton = findViewById(R.id.startTimeButton);
+        endDateButton = findViewById(R.id.endDateButton);
+        endTimeButton = findViewById(R.id.endTimeButton);
+        allDayCheckBox = findViewById(R.id.allDayCheckBox);
+        reminderSpinner = findViewById(R.id.reminderSpinner);
+        saveButton = findViewById(R.id.saveButton);
+        cancelButton = findViewById(R.id.cancelButton);
+        deleteButton = findViewById(R.id.deleteButton);
 
-        db =
-                FirebaseFirestore.getInstance();
-
-
-        titleEditText =
-                findViewById(R.id.titleEditText);
-
-        locationEditText =
-                findViewById(R.id.locationEditText);
-
-        linkEditText =
-                findViewById(R.id.linkEditText);
-
-        descriptionEditText =
-                findViewById(R.id.descriptionEditText);
-
-        startDateButton =
-                findViewById(R.id.startDateButton);
-
-        startTimeButton =
-                findViewById(R.id.startTimeButton);
-
-        endDateButton =
-                findViewById(R.id.endDateButton);
-
-        endTimeButton =
-                findViewById(R.id.endTimeButton);
-
-        allDayCheckBox =
-                findViewById(R.id.allDayCheckBox);
-
-        reminderSpinner =
-                findViewById(R.id.reminderSpinner);
-
-        saveButton =
-                findViewById(R.id.saveButton);
-
-        cancelButton =
-                findViewById(R.id.cancelButton);
-
-        deleteButton =
-                findViewById(R.id.deleteButton);
-
-
-        gregorianDate =
-                getIntent().getStringExtra(
-                        "gregorian_date"
-                );
-
-        hebrewDate =
-                getIntent().getStringExtra(
-                        "hebrew_date"
-                );
-
-        eventId =
-                getIntent().getStringExtra(
-                        "event_id"
-                );
-
+        gregorianDate = getIntent().getStringExtra("gregorian_date");
+        hebrewDate = getIntent().getStringExtra("hebrew_date");
+        eventId = getIntent().getStringExtra("event_id");
 
         setupReminderSpinner();
-
         initializeDates();
-
         updateDateButtons();
-
         updateTimeButtons();
 
+        startDateButton.setOnClickListener(v -> showStartDatePicker());
+        endDateButton.setOnClickListener(v -> showEndDatePicker());
+        startTimeButton.setOnClickListener(v -> showStartTimePicker());
+        endTimeButton.setOnClickListener(v -> showEndTimePicker());
+        cancelButton.setOnClickListener(v -> finish());
+        saveButton.setOnClickListener(v -> saveEvent());
 
-        startDateButton.setOnClickListener(
-                v -> showStartDatePicker()
-        );
+        allDayCheckBox.setOnCheckedChangeListener((v, checked) -> {
+            startTimeButton.setVisibility(checked ? View.GONE : View.VISIBLE);
+            endTimeButton.setVisibility(checked ? View.GONE : View.VISIBLE);
+        });
 
-        endDateButton.setOnClickListener(
-                v -> showEndDatePicker()
-        );
+        boolean editing = eventId != null && !eventId.trim().isEmpty();
+        saveButton.setText(editing ? "עדכון" : "שמירה");
+        deleteButton.setVisibility(editing ? View.VISIBLE : View.GONE);
 
-        startTimeButton.setOnClickListener(
-                v -> showStartTimePicker()
-        );
-
-        endTimeButton.setOnClickListener(
-                v -> showEndTimePicker()
-        );
-
-
-        allDayCheckBox.setOnCheckedChangeListener(
-                (buttonView, isChecked) -> {
-
-                    startTimeButton.setVisibility(
-                            isChecked
-                                    ? View.GONE
-                                    : View.VISIBLE
-                    );
-
-                    endTimeButton.setVisibility(
-                            isChecked
-                                    ? View.GONE
-                                    : View.VISIBLE
-                    );
-                }
-        );
-
-
-        cancelButton.setOnClickListener(
-                v -> finish()
-        );
-
-
-        saveButton.setOnClickListener(
-                v -> saveEvent()
-        );
-
-
-        /*
-         * אם eventId קיים,
-         * אנחנו במצב עריכה ולכן מציגים
-         * את כפתור המחיקה.
-         */
-        if (eventId != null &&
-                !eventId.trim().isEmpty()) {
-
-            saveButton.setText(
-                    "עדכון"
-            );
-
-            deleteButton.setVisibility(
-                    View.VISIBLE
-            );
-
-            deleteButton.setOnClickListener(
-                    v -> confirmDeleteEvent()
-            );
-
+        if (editing) {
+            deleteButton.setOnClickListener(v -> confirmDeleteEvent());
             loadEvent();
-
-        } else {
-
-            saveButton.setText(
-                    "שמירה"
-            );
-
-            /*
-             * ביצירת אירוע חדש אין מה למחוק.
-             */
-            deleteButton.setVisibility(
-                    View.GONE
-            );
         }
     }
 
-
-    /*
-     * ============================================================
-     * אישור מחיקת אירוע
-     * ============================================================
-     */
-
     private void confirmDeleteEvent() {
-
         new AlertDialog.Builder(this)
                 .setTitle("מחיקת אירוע")
-                .setMessage(
-                        "האם אתה בטוח שברצונך למחוק את האירוע?"
-                )
-                .setNegativeButton(
-                        "ביטול",
-                        null
-                )
-                .setPositiveButton(
-                        "מחיקה",
-                        (dialog, which) ->
-                                deleteEvent()
-                )
+                .setMessage("האם אתה בטוח שברצונך למחוק את האירוע?")
+                .setNegativeButton("ביטול", null)
+                .setPositiveButton("מחיקה", (d, w) -> deleteEvent())
                 .show();
     }
 
-
-    /*
-     * ============================================================
-     * מחיקת אירוע מ-Firestore
-     * ============================================================
-     */
-
     private void deleteEvent() {
+        FirebaseUser user = mAuth.getCurrentUser();
 
-        FirebaseUser currentUser =
-                mAuth.getCurrentUser();
-
-
-        if (currentUser == null) {
-
-            Toast.makeText(
-                    this,
-                    "אין משתמש מחובר",
-                    Toast.LENGTH_LONG
-            ).show();
-
+        if (user == null) {
+            msg("אין משתמש מחובר");
             return;
         }
 
-
-        if (eventId == null ||
-                eventId.trim().isEmpty()) {
-
-            Toast.makeText(
-                    this,
-                    "לא נמצא מזהה אירוע",
-                    Toast.LENGTH_LONG
-            ).show();
-
+        if (eventId == null || eventId.trim().isEmpty()) {
+            msg("לא נמצא מזהה אירוע");
             return;
         }
 
-
-        String userId =
-                currentUser.getUid();
-
-
-        /*
-         * מונעים לחיצות נוספות בזמן המחיקה.
-         */
         deleteButton.setEnabled(false);
         saveButton.setEnabled(false);
 
-
-        db.collection("users")
-                .document(userId)
-                .collection("calendarEntries")
-                .document(eventId)
-                .delete()
-                .addOnSuccessListener(
-                        unused -> {
-
-                            Toast.makeText(
-                                    this,
-                                    "האירוע נמחק בהצלחה",
-                                    Toast.LENGTH_SHORT
-                            ).show();
-
-                            finish();
-                        }
-                )
-                .addOnFailureListener(
-                        e -> {
-
-                            deleteButton.setEnabled(true);
-                            saveButton.setEnabled(true);
-
-                            Toast.makeText(
-                                    this,
-                                    "מחיקת האירוע נכשלה: "
-                                            + e.getMessage(),
-                                    Toast.LENGTH_LONG
-                            ).show();
-                        }
-                );
+        db.collection("users").document(user.getUid())
+                .collection("calendarEntries").document(eventId).delete()
+                .addOnSuccessListener(v -> {
+                    msg("האירוע נמחק בהצלחה");
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    deleteButton.setEnabled(true);
+                    saveButton.setEnabled(true);
+                    msg("מחיקת האירוע נכשלה: " + e.getMessage());
+                });
     }
-
-
-    /*
-     * ============================================================
-     * אתחול תאריכים
-     * ============================================================
-     */
 
     private void initializeDates() {
+        boolean ok = gregorianDate != null && !gregorianDate.trim().isEmpty()
+                && setCalendarFromDate(startCalendar, gregorianDate);
 
-        boolean initialized = false;
-
-
-        if (gregorianDate != null &&
-                !gregorianDate.trim().isEmpty()) {
-
-            initialized =
-                    setCalendarFromDate(
-                            startCalendar,
-                            gregorianDate
-                    );
-
-            if (initialized) {
-
-                endCalendar.setTime(
-                        startCalendar.getTime()
-                );
-            }
+        if (ok) endCalendar.setTime(startCalendar.getTime());
+        else {
+            startCalendar.setTimeInMillis(System.currentTimeMillis());
+            endCalendar.setTime(startCalendar.getTime());
         }
 
+        startCalendar.set(Calendar.HOUR_OF_DAY, 14);
+        startCalendar.set(Calendar.MINUTE, 0);
+        startCalendar.set(Calendar.SECOND, 0);
+        startCalendar.set(Calendar.MILLISECOND, 0);
 
-        if (!initialized) {
-
-            Calendar now =
-                    Calendar.getInstance();
-
-            startCalendar.setTime(
-                    now.getTime()
-            );
-
-            endCalendar.setTime(
-                    now.getTime()
-            );
-        }
-
-
-        startCalendar.set(
-                Calendar.HOUR_OF_DAY,
-                14
-        );
-
-        startCalendar.set(
-                Calendar.MINUTE,
-                0
-        );
-
-        startCalendar.set(
-                Calendar.SECOND,
-                0
-        );
-
-        startCalendar.set(
-                Calendar.MILLISECOND,
-                0
-        );
-
-
-        endCalendar.set(
-                Calendar.HOUR_OF_DAY,
-                15
-        );
-
-        endCalendar.set(
-                Calendar.MINUTE,
-                0
-        );
-
-        endCalendar.set(
-                Calendar.SECOND,
-                0
-        );
-
-        endCalendar.set(
-                Calendar.MILLISECOND,
-                0
-        );
+        endCalendar.set(Calendar.HOUR_OF_DAY, 15);
+        endCalendar.set(Calendar.MINUTE, 0);
+        endCalendar.set(Calendar.SECOND, 0);
+        endCalendar.set(Calendar.MILLISECOND, 0);
     }
 
-
-    /*
-     * ============================================================
-     * Spinner התראות
-     * ============================================================
-     */
-
     private void setupReminderSpinner() {
-
         String[] reminders = {
-
-                "ללא התראה",
-                "5 דקות לפני",
-                "10 דקות לפני",
-                "15 דקות לפני",
-                "30 דקות לפני",
-                "שעה לפני",
-                "יום לפני"
+                "ללא התראה", "5 דקות לפני", "10 דקות לפני", "15 דקות לפני",
+                "30 דקות לפני", "שעה לפני", "יום לפני"
         };
 
-
-        ArrayAdapter<String> adapter =
-                new ArrayAdapter<>(
-                        this,
-                        android.R.layout.simple_spinner_item,
-                        reminders
-                );
-
-
-        adapter.setDropDownViewResource(
-                android.R.layout.simple_spinner_dropdown_item
-        );
-
-
-        reminderSpinner.setAdapter(adapter);
-
+        ArrayAdapter<String> a = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, reminders);
+        a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        reminderSpinner.setAdapter(a);
         reminderSpinner.setSelection(0);
     }
 
-
-    /*
-     * ============================================================
-     * בחירת תאריך התחלה
-     * ============================================================
-     */
-
     private void showStartDatePicker() {
-
-        DatePickerDialog dialog =
-                new DatePickerDialog(
-                        this,
-                        (view, year, month, day) -> {
-
-                            startCalendar.set(
-                                    Calendar.YEAR,
-                                    year
-                            );
-
-                            startCalendar.set(
-                                    Calendar.MONTH,
-                                    month
-                            );
-
-                            startCalendar.set(
-                                    Calendar.DAY_OF_MONTH,
-                                    day
-                            );
-
-
-                            if (dateOnly(endCalendar)
-                                    .before(
-                                            dateOnly(startCalendar)
-                                    )) {
-
-                                copyDate(
-                                        endCalendar,
-                                        startCalendar
-                                );
-                            }
-
-
-                            updateDateButtons();
-                        },
-                        startCalendar.get(
-                                Calendar.YEAR
-                        ),
-                        startCalendar.get(
-                                Calendar.MONTH
-                        ),
-                        startCalendar.get(
-                                Calendar.DAY_OF_MONTH
-                        )
-                );
-
-        dialog.show();
+        new DatePickerDialog(this, (v, y, m, d) -> {
+            startCalendar.set(y, m, d);
+            if (dateOnly(endCalendar).before(dateOnly(startCalendar)))
+                copyDate(endCalendar, startCalendar);
+            updateDateButtons();
+        }, startCalendar.get(Calendar.YEAR), startCalendar.get(Calendar.MONTH),
+                startCalendar.get(Calendar.DAY_OF_MONTH)).show();
     }
-
-
-    /*
-     * ============================================================
-     * בחירת תאריך סיום
-     * ============================================================
-     */
 
     private void showEndDatePicker() {
-
-        DatePickerDialog dialog =
-                new DatePickerDialog(
-                        this,
-                        (view, year, month, day) -> {
-
-                            endCalendar.set(
-                                    Calendar.YEAR,
-                                    year
-                            );
-
-                            endCalendar.set(
-                                    Calendar.MONTH,
-                                    month
-                            );
-
-                            endCalendar.set(
-                                    Calendar.DAY_OF_MONTH,
-                                    day
-                            );
-
-
-                            if (dateOnly(endCalendar)
-                                    .before(
-                                            dateOnly(startCalendar)
-                                    )) {
-
-                                Toast.makeText(
-                                        this,
-                                        "תאריך הסיום לא יכול להיות לפני תאריך ההתחלה",
-                                        Toast.LENGTH_SHORT
-                                ).show();
-
-                                copyDate(
-                                        endCalendar,
-                                        startCalendar
-                                );
-                            }
-
-
-                            updateDateButtons();
-                        },
-                        endCalendar.get(
-                                Calendar.YEAR
-                        ),
-                        endCalendar.get(
-                                Calendar.MONTH
-                        ),
-                        endCalendar.get(
-                                Calendar.DAY_OF_MONTH
-                        )
-                );
-
-        dialog.show();
+        new DatePickerDialog(this, (v, y, m, d) -> {
+            endCalendar.set(y, m, d);
+            if (dateOnly(endCalendar).before(dateOnly(startCalendar))) {
+                msg("תאריך הסיום לא יכול להיות לפני תאריך ההתחלה");
+                copyDate(endCalendar, startCalendar);
+            }
+            updateDateButtons();
+        }, endCalendar.get(Calendar.YEAR), endCalendar.get(Calendar.MONTH),
+                endCalendar.get(Calendar.DAY_OF_MONTH)).show();
     }
-
-
-    /*
-     * ============================================================
-     * בחירת שעת התחלה
-     * ============================================================
-     */
 
     private void showStartTimePicker() {
+        new TimePickerDialog(this, (v, h, m) -> {
+            startCalendar.set(Calendar.HOUR_OF_DAY, h);
+            startCalendar.set(Calendar.MINUTE, m);
+            startCalendar.set(Calendar.SECOND, 0);
 
-        TimePickerDialog dialog =
-                new TimePickerDialog(
-                        this,
-                        (view, hour, minute) -> {
-
-                            startCalendar.set(
-                                    Calendar.HOUR_OF_DAY,
-                                    hour
-                            );
-
-                            startCalendar.set(
-                                    Calendar.MINUTE,
-                                    minute
-                            );
-
-                            startCalendar.set(
-                                    Calendar.SECOND,
-                                    0
-                            );
-
-
-                            if (isSameDate(
-                                    startCalendar,
-                                    endCalendar
-                            ) &&
-                                    !endCalendar.after(
-                                            startCalendar
-                                    )) {
-
-                                endCalendar.setTime(
-                                        startCalendar.getTime()
-                                );
-
-                                endCalendar.add(
-                                        Calendar.HOUR_OF_DAY,
-                                        1
-                                );
-                            }
-
-
-                            updateTimeButtons();
-                        },
-                        startCalendar.get(
-                                Calendar.HOUR_OF_DAY
-                        ),
-                        startCalendar.get(
-                                Calendar.MINUTE
-                        ),
-                        true
-                );
-
-        dialog.show();
+            if (isSameDate(startCalendar, endCalendar)
+                    && !endCalendar.after(startCalendar)) {
+                endCalendar.setTime(startCalendar.getTime());
+                endCalendar.add(Calendar.HOUR_OF_DAY, 1);
+            }
+            updateTimeButtons();
+        }, startCalendar.get(Calendar.HOUR_OF_DAY),
+                startCalendar.get(Calendar.MINUTE), true).show();
     }
-
-
-    /*
-     * ============================================================
-     * בחירת שעת סיום
-     * ============================================================
-     */
 
     private void showEndTimePicker() {
-
-        TimePickerDialog dialog =
-                new TimePickerDialog(
-                        this,
-                        (view, hour, minute) -> {
-
-                            endCalendar.set(
-                                    Calendar.HOUR_OF_DAY,
-                                    hour
-                            );
-
-                            endCalendar.set(
-                                    Calendar.MINUTE,
-                                    minute
-                            );
-
-                            endCalendar.set(
-                                    Calendar.SECOND,
-                                    0
-                            );
-
-                            updateTimeButtons();
-                        },
-                        endCalendar.get(
-                                Calendar.HOUR_OF_DAY
-                        ),
-                        endCalendar.get(
-                                Calendar.MINUTE
-                        ),
-                        true
-                );
-
-        dialog.show();
+        new TimePickerDialog(this, (v, h, m) -> {
+            endCalendar.set(Calendar.HOUR_OF_DAY, h);
+            endCalendar.set(Calendar.MINUTE, m);
+            endCalendar.set(Calendar.SECOND, 0);
+            updateTimeButtons();
+        }, endCalendar.get(Calendar.HOUR_OF_DAY),
+                endCalendar.get(Calendar.MINUTE), true).show();
     }
-
-
-    /*
-     * ============================================================
-     * שמירת אירוע
-     * ============================================================
-     */
 
     private void saveEvent() {
-
-        FirebaseUser currentUser =
-                mAuth.getCurrentUser();
-
-
-        if (currentUser == null) {
-
-            Toast.makeText(
-                    this,
-                    "אין משתמש מחובר",
-                    Toast.LENGTH_LONG
-            ).show();
-
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) {
+            msg("אין משתמש מחובר");
             return;
         }
 
-
-        String title =
-                titleEditText
-                        .getText()
-                        .toString()
-                        .trim();
-
-        String location =
-                locationEditText
-                        .getText()
-                        .toString()
-                        .trim();
-
-        String link =
-                linkEditText
-                        .getText()
-                        .toString()
-                        .trim();
-
-        String description =
-                descriptionEditText
-                        .getText()
-                        .toString()
-                        .trim();
-
-        boolean allDay =
-                allDayCheckBox.isChecked();
-
+        String title = titleEditText.getText().toString().trim();
+        boolean allDay = allDayCheckBox.isChecked();
 
         if (title.isEmpty()) {
-
-            titleEditText.setError(
-                    "נא להזין כותרת"
-            );
-
+            titleEditText.setError("נא להזין כותרת");
             titleEditText.requestFocus();
-
             return;
         }
 
-
-        if (dateOnly(endCalendar)
-                .before(
-                        dateOnly(startCalendar)
-                )) {
-
-            Toast.makeText(
-                    this,
-                    "תאריך הסיום לא יכול להיות לפני תאריך ההתחלה",
-                    Toast.LENGTH_LONG
-            ).show();
-
+        if (dateOnly(endCalendar).before(dateOnly(startCalendar))) {
+            msg("תאריך הסיום לא יכול להיות לפני תאריך ההתחלה");
             return;
         }
 
-
-        if (!allDay &&
-                isSameDate(
-                        startCalendar,
-                        endCalendar
-                ) &&
-                !endCalendar.after(
-                        startCalendar
-                )) {
-
-            Toast.makeText(
-                    this,
-                    "שעת הסיום חייבת להיות אחרי שעת ההתחלה",
-                    Toast.LENGTH_LONG
-            ).show();
-
+        if (!allDay && isSameDate(startCalendar, endCalendar)
+                && !endCalendar.after(startCalendar)) {
+            msg("שעת הסיום חייבת להיות אחרי שעת ההתחלה");
             return;
         }
 
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "event");
+        event.put("title", title);
+        event.put("startDate", format(startCalendar, "yyyy-MM-dd"));
+        event.put("endDate", format(endCalendar, "yyyy-MM-dd"));
+        event.put("startTime", allDay ? "" : format(startCalendar, "HH:mm"));
+        event.put("endTime", allDay ? "" : format(endCalendar, "HH:mm"));
+        event.put("allDay", allDay);
+        event.put("location", locationEditText.getText().toString().trim());
+        event.put("link", linkEditText.getText().toString().trim());
+        event.put("reminder", reminderSpinner.getSelectedItem().toString());
+        event.put("description", descriptionEditText.getText().toString().trim());
+        event.put("hebrewDate", hebrewDate);
 
-        String startDate =
-                formatFirestoreDate(
-                        startCalendar
-                );
-
-        String endDate =
-                formatFirestoreDate(
-                        endCalendar
-                );
-
-
-        String startTime =
-                allDay
-                        ? ""
-                        : formatTime(
-                        startCalendar
-                );
-
-        String endTime =
-                allDay
-                        ? ""
-                        : formatTime(
-                        endCalendar
-                );
-
-
-        String reminder =
-                reminderSpinner
-                        .getSelectedItem()
-                        .toString();
-
-
-        Map<String, Object> event =
-                new HashMap<>();
-
-
-        event.put(
-                "type",
-                "event"
-        );
-
-        event.put(
-                "title",
-                title
-        );
-
-        event.put(
-                "startDate",
-                startDate
-        );
-
-        event.put(
-                "endDate",
-                endDate
-        );
-
-        event.put(
-                "startTime",
-                startTime
-        );
-
-        event.put(
-                "endTime",
-                endTime
-        );
-
-        event.put(
-                "allDay",
-                allDay
-        );
-
-        event.put(
-                "location",
-                location
-        );
-
-        event.put(
-                "link",
-                link
-        );
-
-        event.put(
-                "reminder",
-                reminder
-        );
-
-        event.put(
-                "description",
-                description
-        );
-
-        event.put(
-                "hebrewDate",
-                hebrewDate
-        );
-
-
-        String userId =
-                currentUser.getUid();
-
-
-        if (eventId != null &&
-                !eventId.trim().isEmpty()) {
-
-            updateEvent(
-                    userId,
-                    event
-            );
-
-        } else {
-
-            createEvent(
-                    userId,
-                    event
-            );
-        }
+        if (eventId != null && !eventId.trim().isEmpty())
+            updateEvent(user.getUid(), event);
+        else
+            createEvent(user.getUid(), event);
     }
 
+    private void createEvent(String userId, Map<String, Object> event) {
+        event.put("createdAt", FieldValue.serverTimestamp());
 
-    /*
-     * ============================================================
-     * יצירת אירוע
-     * ============================================================
-     */
-
-    private void createEvent(
-            String userId,
-            Map<String, Object> event) {
-
-        event.put(
-                "createdAt",
-                FieldValue.serverTimestamp()
-        );
-
-
-        db.collection("users")
-                .document(userId)
-                .collection("calendarEntries")
-                .add(event)
-                .addOnSuccessListener(
-                        documentReference -> {
-
-                            Toast.makeText(
-                                    this,
-                                    "האירוע נשמר בהצלחה",
-                                    Toast.LENGTH_SHORT
-                            ).show();
-
-                            finish();
-                        }
-                )
-                .addOnFailureListener(
-                        e -> Toast.makeText(
-                                this,
-                                "שמירת האירוע נכשלה: "
-                                        + e.getMessage(),
-                                Toast.LENGTH_LONG
-                        )
-                );
+        db.collection("users").document(userId).collection("calendarEntries").add(event)
+                .addOnSuccessListener(v -> {
+                    msg("האירוע נשמר בהצלחה");
+                    finish();
+                })
+                .addOnFailureListener(e -> msg("שמירת האירוע נכשלה: " + e.getMessage()));
     }
 
-
-    /*
-     * ============================================================
-     * עדכון אירוע
-     * ============================================================
-     */
-
-    private void updateEvent(
-            String userId,
-            Map<String, Object> event) {
-
-        db.collection("users")
-                .document(userId)
-                .collection("calendarEntries")
-                .document(eventId)
-                .update(event)
-                .addOnSuccessListener(
-                        unused -> {
-
-                            Toast.makeText(
-                                    this,
-                                    "האירוע עודכן בהצלחה",
-                                    Toast.LENGTH_SHORT
-                            ).show();
-
-                            finish();
-                        }
-                )
-                .addOnFailureListener(
-                        e -> Toast.makeText(
-                                this,
-                                "עדכון האירוע נכשל: "
-                                        + e.getMessage(),
-                                Toast.LENGTH_LONG
-                        )
-                );
+    private void updateEvent(String userId, Map<String, Object> event) {
+        db.collection("users").document(userId).collection("calendarEntries")
+                .document(eventId).update(event)
+                .addOnSuccessListener(v -> {
+                    msg("האירוע עודכן בהצלחה");
+                    finish();
+                })
+                .addOnFailureListener(e -> msg("עדכון האירוע נכשל: " + e.getMessage()));
     }
-
-
-    /*
-     * ============================================================
-     * טעינת אירוע לעריכה
-     * ============================================================
-     */
 
     private void loadEvent() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) return;
 
-        FirebaseUser currentUser =
-                mAuth.getCurrentUser();
-
-
-        if (currentUser == null) {
-            return;
-        }
-
-
-        db.collection("users")
-                .document(
-                        currentUser.getUid()
-                )
-                .collection("calendarEntries")
-                .document(eventId)
-                .get()
-                .addOnSuccessListener(
-                        this::fillFormFromDocument
-                )
-                .addOnFailureListener(
-                        e -> Toast.makeText(
-                                this,
-                                "טעינת האירוע נכשלה: "
-                                        + e.getMessage(),
-                                Toast.LENGTH_LONG
-                        )
-                );
+        db.collection("users").document(user.getUid()).collection("calendarEntries")
+                .document(eventId).get()
+                .addOnSuccessListener(this::fillFormFromDocument)
+                .addOnFailureListener(e -> msg("טעינת האירוע נכשלה: " + e.getMessage()));
     }
 
-
-    /*
-     * ============================================================
-     * מילוי הטופס
-     * ============================================================
-     */
-
-    private void fillFormFromDocument(
-            DocumentSnapshot document) {
-
-        if (!document.exists()) {
-
-            Toast.makeText(
-                    this,
-                    "האירוע לא נמצא",
-                    Toast.LENGTH_LONG
-            ).show();
-
+    private void fillFormFromDocument(DocumentSnapshot d) {
+        if (!d.exists()) {
+            msg("האירוע לא נמצא");
             finish();
-
             return;
         }
 
+        titleEditText.setText(safe(d.getString("title")));
+        locationEditText.setText(safe(d.getString("location")));
+        linkEditText.setText(safe(d.getString("link")));
+        descriptionEditText.setText(safe(d.getString("description")));
 
-        titleEditText.setText(
-                safe(
-                        document.getString(
-                                "title"
-                        )
-                )
-        );
+        String start = d.getString("startDate");
+        String end = d.getString("endDate");
+        if (start == null) start = d.getString("gregorianDate");
+        if (end == null) end = start;
 
+        setCalendarFromDate(startCalendar, start);
+        setCalendarFromDate(endCalendar, end);
+        setTimeFromString(startCalendar, d.getString("startTime"));
+        setTimeFromString(endCalendar, d.getString("endTime"));
 
-        locationEditText.setText(
-                safe(
-                        document.getString(
-                                "location"
-                        )
-                )
-        );
-
-
-        linkEditText.setText(
-                safe(
-                        document.getString(
-                                "link"
-                        )
-                )
-        );
-
-
-        descriptionEditText.setText(
-                safe(
-                        document.getString(
-                                "description"
-                        )
-                )
-        );
-
-
-        String startDate =
-                document.getString(
-                        "startDate"
-                );
-
-        String endDate =
-                document.getString(
-                        "endDate"
-                );
-
-
-        if (startDate == null) {
-
-            startDate =
-                    document.getString(
-                            "gregorianDate"
-                    );
-        }
-
-        if (endDate == null) {
-            endDate = startDate;
-        }
-
-
-        setCalendarFromDate(
-                startCalendar,
-                startDate
-        );
-
-        setCalendarFromDate(
-                endCalendar,
-                endDate
-        );
-
-
-        setTimeFromString(
-                startCalendar,
-                document.getString(
-                        "startTime"
-                )
-        );
-
-        setTimeFromString(
-                endCalendar,
-                document.getString(
-                        "endTime"
-                )
-        );
-
-
-        Boolean allDay =
-                document.getBoolean(
-                        "allDay"
-                );
-
-
-        allDayCheckBox.setChecked(
-                allDay != null &&
-                        allDay
-        );
-
-
-        setReminderSpinner(
-                document.getString(
-                        "reminder"
-                )
-        );
-
-
+        Boolean allDay = d.getBoolean("allDay");
+        allDayCheckBox.setChecked(allDay != null && allDay);
+        setReminderSpinner(d.getString("reminder"));
         updateDateButtons();
-
         updateTimeButtons();
     }
 
+    private void setReminderSpinner(String reminder) {
+        if (reminder == null) return;
 
-    /*
-     * ============================================================
-     * התראה
-     * ============================================================
-     */
-
-    private void setReminderSpinner(
-            String reminder) {
-
-        if (reminder == null) {
-            return;
-        }
-
-
-        for (int i = 0;
-             i < reminderSpinner.getCount();
-             i++) {
-
-            Object item =
-                    reminderSpinner
-                            .getItemAtPosition(i);
-
-
-            if (item != null &&
-                    reminder.equals(
-                            item.toString()
-                    )) {
-
+        for (int i = 0; i < reminderSpinner.getCount(); i++)
+            if (reminder.equals(reminderSpinner.getItemAtPosition(i).toString())) {
                 reminderSpinner.setSelection(i);
-
                 return;
             }
-        }
     }
-
-
-    /*
-     * ============================================================
-     * עדכון תצוגה
-     * ============================================================
-     */
 
     private void updateDateButtons() {
-
-        startDateButton.setText(
-                formatDisplayDate(
-                        startCalendar
-                )
-        );
-
-        endDateButton.setText(
-                formatDisplayDate(
-                        endCalendar
-                )
-        );
+        startDateButton.setText(format(startCalendar, "dd/MM/yyyy"));
+        endDateButton.setText(format(endCalendar, "dd/MM/yyyy"));
     }
-
 
     private void updateTimeButtons() {
-
-        startTimeButton.setText(
-                formatTime(
-                        startCalendar
-                )
-        );
-
-        endTimeButton.setText(
-                formatTime(
-                        endCalendar
-                )
-        );
+        startTimeButton.setText(format(startCalendar, "HH:mm"));
+        endTimeButton.setText(format(endCalendar, "HH:mm"));
     }
 
+    private boolean setCalendarFromDate(Calendar c, String value) {
+        if (value == null || value.trim().isEmpty()) return false;
 
-    /*
-     * ============================================================
-     * תאריכים
-     * ============================================================
-     */
+        Date d = parse(value, "yyyy-MM-dd");
+        if (d == null) d = parse(value, "dd/MM/yyyy");
+        if (d == null) return false;
 
-    private boolean setCalendarFromDate(
-            Calendar calendar,
-            String value) {
-
-        if (value == null ||
-                value.trim().isEmpty()) {
-
-            return false;
-        }
-
-
-        Date date =
-                parseDate(
-                        value,
-                        FIRESTORE_DATE_FORMAT
-                );
-
-
-        if (date == null) {
-
-            date =
-                    parseDate(
-                            value,
-                            DISPLAY_DATE_FORMAT
-                    );
-        }
-
-
-        if (date == null) {
-            return false;
-        }
-
-
-        Calendar temp =
-                Calendar.getInstance();
-
-        temp.setTime(date);
-
-
-        calendar.set(
-                Calendar.YEAR,
-                temp.get(Calendar.YEAR)
-        );
-
-        calendar.set(
-                Calendar.MONTH,
-                temp.get(Calendar.MONTH)
-        );
-
-        calendar.set(
-                Calendar.DAY_OF_MONTH,
-                temp.get(Calendar.DAY_OF_MONTH)
-        );
-
-
+        Calendar t = Calendar.getInstance();
+        t.setTime(d);
+        c.set(t.get(Calendar.YEAR), t.get(Calendar.MONTH), t.get(Calendar.DAY_OF_MONTH));
         return true;
     }
 
+    private void setTimeFromString(Calendar c, String value) {
+        if (value == null || value.trim().isEmpty()) return;
 
-    private Date parseDate(
-            String value,
-            String pattern) {
+        Date d = parse(value, "HH:mm");
+        if (d == null) return;
 
-        SimpleDateFormat format =
-                new SimpleDateFormat(
-                        pattern,
-                        Locale.US
-                );
+        Calendar t = Calendar.getInstance();
+        t.setTime(d);
+        c.set(Calendar.HOUR_OF_DAY, t.get(Calendar.HOUR_OF_DAY));
+        c.set(Calendar.MINUTE, t.get(Calendar.MINUTE));
+    }
 
-        format.setLenient(false);
-
-
+    private Date parse(String value, String pattern) {
+        SimpleDateFormat f = new SimpleDateFormat(pattern, Locale.US);
+        f.setLenient(false);
         try {
-
-            return format.parse(value);
-
+            return f.parse(value);
         } catch (ParseException e) {
-
             return null;
         }
     }
 
-
-    private void setTimeFromString(
-            Calendar calendar,
-            String value) {
-
-        if (value == null ||
-                value.trim().isEmpty()) {
-
-            return;
-        }
-
-
-        Date date =
-                parseDate(
-                        value,
-                        TIME_FORMAT
-                );
-
-
-        if (date == null) {
-            return;
-        }
-
-
-        Calendar temp =
-                Calendar.getInstance();
-
-        temp.setTime(date);
-
-
-        calendar.set(
-                Calendar.HOUR_OF_DAY,
-                temp.get(Calendar.HOUR_OF_DAY)
-        );
-
-        calendar.set(
-                Calendar.MINUTE,
-                temp.get(Calendar.MINUTE)
-        );
+    private String format(Calendar c, String pattern) {
+        return new SimpleDateFormat(pattern, Locale.US).format(c.getTime());
     }
 
-
-    private Date dateOnly(
-            Calendar calendar) {
-
-        Calendar copy =
-                Calendar.getInstance();
-
-        copy.set(
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH),
-                0,
-                0,
-                0
-        );
-
-        copy.set(
-                Calendar.MILLISECOND,
-                0
-        );
-
-        return copy.getTime();
+    private Date dateOnly(Calendar c) {
+        Calendar x = Calendar.getInstance();
+        x.clear();
+        x.set(c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH));
+        return x.getTime();
     }
 
-
-    private void copyDate(
-            Calendar target,
-            Calendar source) {
-
-        target.set(
-                Calendar.YEAR,
-                source.get(Calendar.YEAR)
-        );
-
-        target.set(
-                Calendar.MONTH,
-                source.get(Calendar.MONTH)
-        );
-
-        target.set(
-                Calendar.DAY_OF_MONTH,
-                source.get(Calendar.DAY_OF_MONTH)
-        );
+    private void copyDate(Calendar target, Calendar source) {
+        target.set(source.get(Calendar.YEAR), source.get(Calendar.MONTH),
+                source.get(Calendar.DAY_OF_MONTH));
     }
 
-
-    private boolean isSameDate(
-            Calendar first,
-            Calendar second) {
-
-        return first.get(Calendar.YEAR)
-                ==
-                second.get(Calendar.YEAR)
-                &&
-                first.get(Calendar.DAY_OF_YEAR)
-                        ==
-                        second.get(Calendar.DAY_OF_YEAR);
+    private boolean isSameDate(Calendar a, Calendar b) {
+        return a.get(Calendar.YEAR) == b.get(Calendar.YEAR)
+                && a.get(Calendar.DAY_OF_YEAR) == b.get(Calendar.DAY_OF_YEAR);
     }
 
-
-    /*
-     * ============================================================
-     * פורמטים
-     * ============================================================
-     */
-
-    private String formatFirestoreDate(
-            Calendar calendar) {
-
-        SimpleDateFormat format =
-                new SimpleDateFormat(
-                        FIRESTORE_DATE_FORMAT,
-                        Locale.US
-                );
-
-        return format.format(
-                calendar.getTime()
-        );
+    private String safe(String s) {
+        return s == null ? "" : s;
     }
 
-
-    private String formatDisplayDate(
-            Calendar calendar) {
-
-        SimpleDateFormat format =
-                new SimpleDateFormat(
-                        DISPLAY_DATE_FORMAT,
-                        Locale.US
-                );
-
-        return format.format(
-                calendar.getTime()
-        );
+    private void msg(String s) {
+        Toast.makeText(this, s, Toast.LENGTH_LONG).show();
     }
-
-
-    private String formatTime(
-            Calendar calendar) {
-
-        SimpleDateFormat format =
-                new SimpleDateFormat(
-                        TIME_FORMAT,
-                        Locale.US
-                );
-
-        return format.format(
-                calendar.getTime()
-        );
-    }
-
-
-    private String safe(
-            String value) {
-
-        return value == null
-                ? ""
-                : value;
-    }
-
 }
