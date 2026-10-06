@@ -61,6 +61,7 @@ public class HebrewCalendarFragment extends Fragment {
                 Integer y=(Integer)p.getItemAtPosition(pos);
                 if(y==null)return;
                 calendarView.selectedYear=y;
+                loadCalendarEntries();
                 calendarView.invalidate();
                 if(y==2026)calendarView.post(calendarView::focusOnToday);
             }
@@ -105,7 +106,25 @@ public class HebrewCalendarFragment extends Fragment {
                         e.link=d.getString("link");
                         e.reminder=d.getString("reminder");
                         e.description=d.getString("description");
-                        addEntryToDateRange(e);
+
+                        e.recurrenceType = d.getString("recurrenceType");
+
+                        e.recurrenceEndDate =
+                                d.getString("recurrenceEndDate");
+
+                        Long recurrenceDay =
+                                d.getLong("recurrenceDay");
+
+                        e.recurrenceDay =
+                                recurrenceDay == null ? 0 : recurrenceDay.intValue();
+
+
+                        if ("monthly".equals(e.recurrenceType)) {
+                            addMonthlyRecurringEntry(e);
+                        } else {
+                            addEntryToDateRange(e);
+                        }
+
                     }
                     if(calendarView!=null)calendarView.invalidate();
                 })
@@ -114,6 +133,109 @@ public class HebrewCalendarFragment extends Fragment {
                             "טעינת הנתונים נכשלה: "+e.getMessage(),Toast.LENGTH_LONG).show();
                 });
     }
+
+    private void addMonthlyRecurringEntry(CalendarEntry e) {
+
+        if (e == null || empty(e.startDate)) {
+            return;
+        }
+
+        Calendar start = parseDate(e.startDate);
+
+        if (start == null) {
+            return;
+        }
+
+        normalizeDate(start);
+
+        int recurrenceDay = e.recurrenceDay;
+
+        if (recurrenceDay < 1 || recurrenceDay > 31) {
+            recurrenceDay =
+                    start.get(Calendar.DAY_OF_MONTH);
+        }
+
+        Calendar recurrenceEnd = null;
+
+        if (!empty(e.recurrenceEndDate)) {
+            recurrenceEnd = parseDate(e.recurrenceEndDate);
+
+            if (recurrenceEnd != null) {
+                normalizeDate(recurrenceEnd);
+            }
+        }
+
+        Calendar displayStart = Calendar.getInstance();
+
+        displayStart.set(
+                calendarView.selectedYear - 1,
+                Calendar.DECEMBER,
+                1
+        );
+
+        normalizeDate(displayStart);
+
+        Calendar displayEnd =
+                (Calendar) displayStart.clone();
+
+        displayEnd.add(Calendar.MONTH, 13);
+        displayEnd.add(Calendar.DAY_OF_MONTH, -1);
+
+        Calendar firstOccurrence =
+                (Calendar) start.clone();
+
+        Calendar cursor =
+                (Calendar) displayStart.clone();
+
+        if (cursor.before(firstOccurrence)) {
+            cursor = firstOccurrence;
+        }
+
+        cursor.set(Calendar.DAY_OF_MONTH, 1);
+
+        while (!cursor.after(displayEnd)) {
+
+            if (recurrenceEnd != null &&
+                    cursor.after(recurrenceEnd)) {
+                break;
+            }
+
+            Calendar occurrence =
+                    (Calendar) cursor.clone();
+
+            int maxDay =
+                    occurrence.getActualMaximum(
+                            Calendar.DAY_OF_MONTH
+                    );
+
+            int actualDay =
+                    Math.min(recurrenceDay, maxDay);
+
+            occurrence.set(
+                    Calendar.DAY_OF_MONTH,
+                    actualDay
+            );
+
+            normalizeDate(occurrence);
+
+            if (!occurrence.before(start)
+                    && !occurrence.after(displayEnd)
+                    && (recurrenceEnd == null
+                    || !occurrence.after(recurrenceEnd))) {
+
+                calendarEntries
+                        .computeIfAbsent(
+                                formatDateKey(occurrence),
+                                k -> new ArrayList<>()
+                        )
+                        .add(e);
+            }
+
+            cursor.add(Calendar.MONTH, 1);
+        }
+    }
+
+
 
     private boolean empty(String s){return s==null||s.trim().isEmpty();}
 
@@ -165,8 +287,17 @@ public class HebrewCalendarFragment extends Fragment {
     }
 
     public static class CalendarEntry{
-        public String id,startDate,endDate,hebrewDate,type,title,startTime,endTime,location,link,reminder,description;
+
+        public String id,startDate,endDate,hebrewDate,type,title,
+                startTime,endTime,location,link,reminder,description;
+
+        public String recurrenceType;
+        public String recurrenceEndDate;
+        public int recurrenceDay;
+
         public boolean allDay;
+
+
     }
 
     private class CalendarTableView extends View {

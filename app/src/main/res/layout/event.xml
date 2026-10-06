@@ -67,6 +67,68 @@
             android:text="כל היום"
             android:layout_marginBottom="16dp"/>
 
+
+
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="חזרה על האירוע"
+            android:textStyle="bold"/>
+
+        <Spinner
+            android:id="@+id/recurrenceSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"/>
+
+        <LinearLayout
+            android:id="@+id/monthlyRecurrenceLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="יום בחודש"
+                android:textStyle="bold"/>
+
+            <EditText
+                android:id="@+id/recurrenceDayEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="לדוגמה: 19"
+                android:inputType="number"
+                android:maxLength="2"
+                android:layout_marginBottom="12dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="סיום החזרה"
+                android:textStyle="bold"/>
+
+            <CheckBox
+                android:id="@+id/noRecurrenceEndCheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="ללא תאריך סיום"
+                android:checked="true"/>
+
+            <Button
+                android:id="@+id/recurrenceEndDateButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="בחירת תאריך סיום"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp"/>
+
+        </LinearLayout>
+
+
+
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="מיקום" android:textStyle="bold"/>
         <EditText
             android:id="@+id/locationEditText"

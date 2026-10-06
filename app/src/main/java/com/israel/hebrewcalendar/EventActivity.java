@@ -10,6 +10,8 @@ import com.google.firebase.auth.*;
 import com.google.firebase.firestore.*;
 import java.text.*;
 import java.util.*;
+import android.widget.*;
+
 
 public class EventActivity extends AppCompatActivity {
 
@@ -18,6 +20,16 @@ public class EventActivity extends AppCompatActivity {
             saveButton, cancelButton, deleteButton;
     private CheckBox allDayCheckBox;
     private Spinner reminderSpinner;
+
+    private Spinner recurrenceSpinner;
+    private EditText recurrenceDayEditText;
+    private LinearLayout monthlyRecurrenceLayout;
+    private CheckBox noRecurrenceEndCheckBox;
+    private Button recurrenceEndDateButton;
+
+    private final Calendar recurrenceEndCalendar = Calendar.getInstance();
+
+
     private final Calendar startCalendar = Calendar.getInstance(), endCalendar = Calendar.getInstance();
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -45,11 +57,23 @@ public class EventActivity extends AppCompatActivity {
         cancelButton = findViewById(R.id.cancelButton);
         deleteButton = findViewById(R.id.deleteButton);
 
+        recurrenceSpinner = findViewById(R.id.recurrenceSpinner);
+        recurrenceDayEditText = findViewById(R.id.recurrenceDayEditText);
+        monthlyRecurrenceLayout = findViewById(R.id.monthlyRecurrenceLayout);
+        noRecurrenceEndCheckBox = findViewById(R.id.noRecurrenceEndCheckBox);
+        recurrenceEndDateButton = findViewById(R.id.recurrenceEndDateButton);
+
+
+
         gregorianDate = getIntent().getStringExtra("gregorian_date");
         hebrewDate = getIntent().getStringExtra("hebrew_date");
         eventId = getIntent().getStringExtra("event_id");
 
         setupReminderSpinner();
+
+        setupRecurrenceSpinner();
+
+
         initializeDates();
         updateDateButtons();
         updateTimeButtons();
@@ -75,6 +99,86 @@ public class EventActivity extends AppCompatActivity {
             loadEvent();
         }
     }
+
+    private void setupRecurrenceSpinner() {
+        String[] recurrenceOptions = {
+                "ללא חזרה",
+                "כל חודש"
+        };
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                recurrenceOptions
+        );
+
+        adapter.setDropDownViewResource(
+                android.R.layout.simple_spinner_dropdown_item
+        );
+
+        recurrenceSpinner.setAdapter(adapter);
+        recurrenceSpinner.setSelection(0);
+
+        recurrenceSpinner.setOnItemSelectedListener(
+                new AdapterView.OnItemSelectedListener() {
+
+                    @Override
+                    public void onItemSelected(
+                            AdapterView<?> parent,
+                            View view,
+                            int position,
+                            long id) {
+
+                        boolean monthly = position == 1;
+
+                        monthlyRecurrenceLayout.setVisibility(
+                                monthly ? View.VISIBLE : View.GONE
+                        );
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
+                    }
+                });
+
+        noRecurrenceEndCheckBox.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> {
+
+                    recurrenceEndDateButton.setVisibility(
+                            isChecked ? View.GONE : View.VISIBLE
+                    );
+                });
+
+        recurrenceEndDateButton.setOnClickListener(
+                v -> showRecurrenceEndDatePicker()
+        );
+    }
+
+
+
+    private void showRecurrenceEndDatePicker() {
+
+        new DatePickerDialog(
+                this,
+                (view, year, month, dayOfMonth) -> {
+
+                    recurrenceEndCalendar.set(
+                            year,
+                            month,
+                            dayOfMonth
+                    );
+
+                    recurrenceEndDateButton.setText(
+                            format(recurrenceEndCalendar, "dd/MM/yyyy")
+                    );
+                },
+                recurrenceEndCalendar.get(Calendar.YEAR),
+                recurrenceEndCalendar.get(Calendar.MONTH),
+                recurrenceEndCalendar.get(Calendar.DAY_OF_MONTH)
+        ).show();
+    }
+
+
 
     private void confirmDeleteEvent() {
         new AlertDialog.Builder(this)
@@ -133,6 +237,13 @@ public class EventActivity extends AppCompatActivity {
         endCalendar.set(Calendar.MINUTE, 0);
         endCalendar.set(Calendar.SECOND, 0);
         endCalendar.set(Calendar.MILLISECOND, 0);
+
+        recurrenceEndCalendar.setTime(startCalendar.getTime());
+
+        recurrenceDayEditText.setText(
+                String.valueOf(startCalendar.get(Calendar.DAY_OF_MONTH))
+        );
+
     }
 
     private void setupReminderSpinner() {
@@ -237,6 +348,77 @@ public class EventActivity extends AppCompatActivity {
         event.put("description", descriptionEditText.getText().toString().trim());
         event.put("hebrewDate", hebrewDate);
 
+        String recurrenceType = "none";
+
+        if (recurrenceSpinner.getSelectedItem() != null) {
+            if ("כל חודש".equals(
+                    recurrenceSpinner.getSelectedItem().toString())) {
+                recurrenceType = "monthly";
+            }
+        }
+
+        event.put("recurrenceType", recurrenceType);
+
+        if ("monthly".equals(recurrenceType)) {
+
+            String dayText =
+                    recurrenceDayEditText.getText().toString().trim();
+
+            if (dayText.isEmpty()) {
+                recurrenceDayEditText.setError(
+                        "נא להזין את היום בחודש"
+                );
+                recurrenceDayEditText.requestFocus();
+                return;
+            }
+
+            int recurrenceDay;
+
+            try {
+                recurrenceDay = Integer.parseInt(dayText);
+            } catch (NumberFormatException e) {
+                recurrenceDayEditText.setError(
+                        "יום לא תקין"
+                );
+                recurrenceDayEditText.requestFocus();
+                return;
+            }
+
+            if (recurrenceDay < 1 || recurrenceDay > 31) {
+                recurrenceDayEditText.setError(
+                        "יש להזין יום בין 1 ל־31"
+                );
+                recurrenceDayEditText.requestFocus();
+                return;
+            }
+
+            event.put("recurrenceDay", recurrenceDay);
+
+            if (noRecurrenceEndCheckBox.isChecked()) {
+                event.put("recurrenceEndDate", "");
+            } else {
+
+                if (dateOnly(recurrenceEndCalendar)
+                        .before(dateOnly(startCalendar))) {
+
+                    msg("תאריך סיום החזרה לא יכול להיות לפני תאריך ההתחלה");
+                    return;
+                }
+
+                event.put(
+                        "recurrenceEndDate",
+                        format(recurrenceEndCalendar, "yyyy-MM-dd")
+                );
+            }
+
+        } else {
+
+            event.put("recurrenceDay", 0);
+            event.put("recurrenceEndDate", "");
+        }
+
+
+
         if (eventId != null && !eventId.trim().isEmpty())
             updateEvent(user.getUid(), event);
         else
@@ -299,9 +481,68 @@ public class EventActivity extends AppCompatActivity {
         Boolean allDay = d.getBoolean("allDay");
         allDayCheckBox.setChecked(allDay != null && allDay);
         setReminderSpinner(d.getString("reminder"));
+
+        loadRecurrenceFromDocument(d);
+
         updateDateButtons();
         updateTimeButtons();
     }
+
+
+    private void loadRecurrenceFromDocument(DocumentSnapshot d) {
+
+        String recurrenceType =
+                d.getString("recurrenceType");
+
+        if ("monthly".equals(recurrenceType)) {
+
+            recurrenceSpinner.setSelection(1);
+
+            Long day = d.getLong("recurrenceDay");
+
+            if (day != null) {
+                recurrenceDayEditText.setText(
+                        String.valueOf(day)
+                );
+            } else {
+                recurrenceDayEditText.setText(
+                        String.valueOf(
+                                startCalendar.get(Calendar.DAY_OF_MONTH)
+                        )
+                );
+            }
+
+            String endDate =
+                    d.getString("recurrenceEndDate");
+
+            if (endDate == null || endDate.trim().isEmpty()) {
+
+                noRecurrenceEndCheckBox.setChecked(true);
+
+            } else {
+
+                noRecurrenceEndCheckBox.setChecked(false);
+
+                if (setCalendarFromDate(
+                        recurrenceEndCalendar,
+                        endDate)) {
+
+                    recurrenceEndDateButton.setText(
+                            format(
+                                    recurrenceEndCalendar,
+                                    "dd/MM/yyyy"
+                            )
+                    );
+                }
+            }
+
+        } else {
+
+            recurrenceSpinner.setSelection(0);
+            monthlyRecurrenceLayout.setVisibility(View.GONE);
+        }
+    }
+
 
     private void setReminderSpinner(String reminder) {
         if (reminder == null) return;

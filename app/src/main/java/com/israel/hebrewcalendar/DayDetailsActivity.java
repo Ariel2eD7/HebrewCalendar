@@ -78,15 +78,54 @@ public class DayDetailsActivity extends AppCompatActivity {
                             end = start;
                         }
 
-                        if (start == null || end == null ||
-                                !isDateInsideRange(selectedDate, start, end))
+
+                        String recurrenceType =
+                                d.getString("recurrenceType");
+
+                        boolean matches;
+
+                        if ("monthly".equals(recurrenceType)) {
+
+                            Long recurrenceDayValue =
+                                    d.getLong("recurrenceDay");
+
+                            int recurrenceDay =
+                                    recurrenceDayValue == null
+                                            ? getDayOfDate(start)
+                                            : recurrenceDayValue.intValue();
+
+                            String recurrenceEndDate =
+                                    d.getString("recurrenceEndDate");
+
+                            matches = isMonthlyOccurrence(
+                                    selectedDate,
+                                    start,
+                                    recurrenceDay,
+                                    recurrenceEndDate
+                            );
+
+                        } else {
+
+                            matches =
+                                    isDateInsideRange(
+                                            selectedDate,
+                                            start,
+                                            end
+                                    );
+                        }
+
+                        if (!matches) {
                             continue;
+                        }
+
 
                         HebrewCalendarFragment.CalendarEntry e = new HebrewCalendarFragment.CalendarEntry();
                         e.id = d.getId();
                         e.title = d.getString("title");
-                        e.startDate = start;
-                        e.endDate = end;
+
+                        e.startDate = selectedDate;
+                        e.endDate = selectedDate;
+
                         e.startTime = d.getString("startTime");
                         e.endTime = d.getString("endTime");
                         Boolean allDay = d.getBoolean("allDay");
@@ -102,6 +141,66 @@ public class DayDetailsActivity extends AppCompatActivity {
                         "טעינת האירועים נכשלה: " + e.getMessage(),
                         Toast.LENGTH_LONG).show());
     }
+
+    private boolean isMonthlyOccurrence(
+            String selectedDate,
+            String startDate,
+            int recurrenceDay,
+            String recurrenceEndDate) {
+
+        Date selected = parseFirestoreDate(selectedDate);
+        Date start = parseFirestoreDate(startDate);
+
+        if (selected == null || start == null) {
+            return false;
+        }
+
+        if (selected.before(start)) {
+            return false;
+        }
+
+        if (recurrenceEndDate != null &&
+                !recurrenceEndDate.trim().isEmpty()) {
+
+            Date end =
+                    parseFirestoreDate(recurrenceEndDate);
+
+            if (end != null && selected.after(end)) {
+                return false;
+            }
+        }
+
+        Calendar s = Calendar.getInstance();
+        s.setTime(start);
+
+        Calendar d = Calendar.getInstance();
+        d.setTime(selected);
+
+        int maxDay =
+                d.getActualMaximum(Calendar.DAY_OF_MONTH);
+
+        int actualDay =
+                Math.min(recurrenceDay, maxDay);
+
+        return d.get(Calendar.DAY_OF_MONTH) == actualDay;
+    }
+
+
+    private int getDayOfDate(String date) {
+
+        Date d = parseFirestoreDate(date);
+
+        if (d == null) {
+            return 1;
+        }
+
+        Calendar c = Calendar.getInstance();
+        c.setTime(d);
+
+        return c.get(Calendar.DAY_OF_MONTH);
+    }
+
+
 
     private void displayEntries() {
         entriesContainer.removeAllViews();
